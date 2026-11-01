@@ -553,11 +553,9 @@ function reverseGeo(lat, lon) {
   reverseGeo.t = setTimeout(async () => {
     const key = lat.toFixed(5) + "," + lon.toFixed(5);
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=uz&lat=${lat}&lon=${lon}`);
-      const j = await r.json();
-      const a = j.address || {};
-      const street = a.road || a.pedestrian || a.residential || a.neighbourhood || a.quarter || a.suburb || "";
-      const title = [street, a.house_number].filter(Boolean).join(", ") || j.name || a.city || a.town || a.village || "";
+      // server orqali: Nominatim + Overpass (mahalla, eng yaqin ko'cha, uy raqami)
+      const g = await call("geo", { lat, lon });
+      const title = [g.mahalla, g.street, g.house ? g.house + "-uy" : ""].filter(Boolean).join(", ") || g.city || "";
       if (S.loc && S.loc.lat.toFixed(5) + "," + S.loc.lon.toFixed(5) !== key) return;   // pin allaqachon ko'chdi
       S.geo = title;
       const e2 = $("geo"); if (e2) e2.textContent = title || "Belgilangan nuqta";

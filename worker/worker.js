@@ -27,6 +27,10 @@ const phoneFromText = (raw) => {
   return d ? "+" + d : "";
 };
 // Nominatim javobidan o'qiladigan manzil: viloyat/shahar, mahalla, ko'cha, uy
+export function formatParts(p) {
+  const city = p.city || "";
+  return [city, p.mahalla && p.mahalla !== city ? p.mahalla : "", p.street, p.house ? `${p.house}-uy` : ""].filter(Boolean).join(", ");
+}
 export function formatAddress(a) {
   if (!a) return "";
   const city = a.city || a.town || a.village || a.hamlet || a.county || "";
@@ -131,7 +135,10 @@ export function createApp(deps) {
   const locationKb = { keyboard: [[{ text: B.location, request_location: true }]], resize_keyboard: true, is_persistent: true,
                        input_field_placeholder: "Pastdagi tugmani bosing 👇" };
   async function geocode(lat, lon) {
-    try { return deps.geocode ? (await deps.geocode(lat, lon)) || "" : ""; } catch (e) { console.warn("geocode", e?.message); return ""; }
+    try {
+      const r = deps.geocode ? await deps.geocode(lat, lon) : null;
+      return typeof r === "string" ? { text: r, street: r, mahalla: r } : (r || { text: "" });
+    } catch (e) { console.warn("geocode", e?.message); return { text: "" }; }
   }
 
   const mk = (tg) => ({
@@ -347,6 +354,11 @@ export function createApp(deps) {
         { reply_markup: { remove_keyboard: true } });
     }
     await C.send(uid, "📍 Joylashuv qabul qilindi.", { reply_markup: { remove_keyboard: true } });
+    if (sess.partial && !sess.edited) {
+      await clientSession(uid, { ...sess, flow: "reg", step: "address_add" });
+      return C.send(uid, `🏠 Xaritada faqat shu topildi: <b>${esc(sess.addr)}</b>\n\n` +
+        "Dostavchi adashmasligi uchun <b>mahalla, ko'cha va uy raqamini</b> yozing.\nMasalan: <i>Navro'z mahallasi, Ipak Yo'li ko'chasi, 12-uy</i>");
+    }
     return C.send(uid, `🏠 <b>Uy manzilingiz:</b>\n${esc(sess.addr)}\n\nShu manzilga olib boramizmi?`, { reply_markup: addrKb });
   }
 
@@ -365,8 +377,8 @@ export function createApp(deps) {
     }
     if (msg.location && user.name_locked && user.phone) {
       const { latitude: lat, longitude: lon } = msg.location;
-      const addr = await geocode(lat, lon);
-      return showAddress(uid, { lat, lon, addr });
+      const g = await geocode(lat, lon);
+      return showAddress(uid, { lat, lon, addr: g.text || "", partial: !(g.street && g.mahalla) });
     }
     if (text && !text.startsWith("/")) {
       if (!user.name_locked && sess.step === "name") {
@@ -386,8 +398,8 @@ export function createApp(deps) {
         return savePhone(uid, user, from, phone);
       } else if (user.phone && user.last_lat == null && ["address_add", "address_new"].includes(sess.step) && sess.lat != null) {
         if (text.length < 3) return C.send(uid, "Iltimos, biroz batafsilroq yozing.");
-        const addr = sess.step === "address_add" && sess.addr ? `${sess.addr}, ${text.slice(0, 120)}` : text.slice(0, 250);
-        return showAddress(uid, { lat: sess.lat, lon: sess.lon, addr });
+        const addr = sess.step === "address_add" && sess.addr ? `${sess.addr}, ${text.slice(0, 160)}` : text.slice(0, 250);
+        return showAddress(uid, { lat: sess.lat, lon: sess.lon, addr, edited: true });
       }
     }
     return askNextRegStep(uid, user, from);
@@ -881,6 +893,12 @@ export function createApp(deps) {
     await rpc("upsert_user", { tg_id: uid, full_name: [user.first_name, user.last_name].filter(Boolean).join(" "), username: user.username || null });
 
     // --- mijoz ---
+    if (a === "geo") {
+      const lat = Number(body.lat), lon = Number(body.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { error: "Koordinata noto'g'ri" };
+      const g = await geocode(lat, lon);
+      return { text: g.text || "", city: g.city || "", mahalla: g.mahalla || "", street: g.street || "", house: g.house || "" };
+    }
     if (a === "me") return { ...(await rpc("client_me", { tg_id: uid })), is_admin: via === "staff" && (await isOwner(uid)) };
     if (a === "order") {
       const r = await rpc("create_order", { client_id: uid, lat: body.lat, lon: body.lon, address: body.address,
@@ -1132,16 +1150,58 @@ function makeTg(token) {
   };
 }
 
-function makeDeps(env, ctx) {
-  // OpenStreetMap Nominatim: koordinatadan uy, ko'cha, mahalla (bepul, kalitsiz; 1 so'rov/soniya chegarasi)
+export function makeDeps(env, ctx) {
+  // Koordinatadan manzil: OpenStreetMap Nominatim (bir necha masshtab) + Overpass (eng yaqin ko'cha, mahalla, uy raqami).
+  // Ikkalasi ham bepul va kalitsiz. Natija: { city, mahalla, street, house }
+  const UA = { "User-Agent": "ZamZamWaterBot/1.0 (telegram delivery bot)" };
+  async function getJson(url, opts = {}, ms = 6000) {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
+    try { const r = await fetch(url, { ...opts, signal: ctl.signal }); return r.ok ? await r.json() : null; }
+    catch { return null; } finally { clearTimeout(t); }
+  }
+  async function geocodeParts(lat, lon) {
+    const out = { city: "", mahalla: "", street: "", house: "" };
+    const nom = (z) => getJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=${z}&addressdetails=1&accept-language=uz`, { headers: UA });
+    const take = (a) => {
+      if (!a) return;
+      out.city ||= a.city || a.town || a.village || a.hamlet || a.county || "";
+      out.mahalla ||= a.neighbourhood || a.quarter || a.suburb || a.residential || a.city_district || "";
+      out.street ||= a.road || a.pedestrian || a.footway || "";
+      out.house ||= a.house_number || "";
+    };
+    take((await nom(18))?.address);
+    if (!out.street) take((await nom(17))?.address);
+    if (!out.street || !out.mahalla) {
+      const q = `[out:json][timeout:10];is_in(${lat},${lon})->.a;area.a[name][admin_level]->.adm;.adm out tags;` +
+        `way(around:350,${lat},${lon})[highway][name];out tags center;` +
+        `node(around:1200,${lat},${lon})[place~"neighbourhood|quarter|suburb|hamlet|village"][name];out tags;` +
+        `nwr(around:40,${lat},${lon})["addr:housenumber"];out tags center;`;
+      const ov = await getJson("https://overpass-api.de/api/interpreter",
+        { method: "POST", headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded" }, body: "data=" + encodeURIComponent(q) }, 12000);
+      const els = ov?.elements || [];
+      const d = (e) => { const c = e.center || e; return c.lat == null ? 1e9 : (c.lat - lat) ** 2 + ((c.lon - lon) * Math.cos(lat * Math.PI / 180)) ** 2; };
+      const nm = (e) => e.tags?.["name:uz"] || e.tags?.name || "";
+      if (!out.street) out.street = nm(els.filter((e) => e.type === "way" && e.tags?.highway).sort((x, y) => d(x) - d(y))[0] || {});
+      if (!out.mahalla) {
+        const adm = els.filter((e) => e.type === "area" && Number(e.tags?.admin_level) >= 8 && nm(e) && nm(e) !== out.city)
+          .sort((x, y) => Number(y.tags.admin_level) - Number(x.tags.admin_level))[0];
+        const place = els.filter((e) => e.type === "node" && e.tags?.place).sort((x, y) => d(x) - d(y))[0];
+        out.mahalla = nm(adm || {}) || nm(place || {});
+      }
+      if (!out.house) { const h = els.filter((e) => e.tags?.["addr:housenumber"]).sort((x, y) => d(x) - d(y))[0]; out.house = h?.tags["addr:housenumber"] || ""; if (!out.street && h) out.street = h.tags["addr:street"] || ""; }
+      if (!out.city) out.city = nm(els.filter((e) => e.type === "area" && ["4", "5", "6"].includes(e.tags?.admin_level))
+        .sort((x, y) => Number(y.tags.admin_level) - Number(x.tags.admin_level))[0] || {});
+    }
+    return out;
+  }
+  const geoCache = new Map();
   async function geocode(lat, lon) {
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=uz`,
-        { headers: { "User-Agent": "ZamZamWaterBot/1.0 (telegram delivery bot)" }, signal: ctl.signal });
-      if (!res.ok) return "";
-      return formatAddress((await res.json())?.address);
-    } finally { clearTimeout(t); }
+    const key = `${(+lat).toFixed(4)},${(+lon).toFixed(4)}`;
+    if (geoCache.has(key)) return geoCache.get(key);
+    const p = await geocodeParts(lat, lon);
+    const r = { text: formatParts(p), ...p };
+    if (r.text) { if (geoCache.size > 500) geoCache.clear(); geoCache.set(key, r); }
+    return r;
   }
   const staffToken = env.STAFF_BOT_TOKEN || env.BOT_TOKEN;
   async function rpc(name, p) {

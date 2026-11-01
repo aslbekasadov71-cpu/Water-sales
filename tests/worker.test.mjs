@@ -3,7 +3,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { createApp, verifyInitData, hashPassword, formatAddress } from "../worker/worker.js";
+import { createApp, verifyInitData, hashPassword, formatAddress, makeDeps } from "../worker/worker.js";
 
 const HOST = process.env.TEST_PG_HOST || "/home/pgtest";
 const TOKEN = "123456:CLIENT_TOKEN";
@@ -739,4 +739,37 @@ test("ro'yxat: boshqa raqam kiritish va manzilni o'zi yozish; manzil formati", a
   assert.ok(t.client.texts(710).some((x) => x.includes("Ro'yxatdan o'tdingiz")));
   assert.equal(formatAddress({ house_number: "7", road: "Ipak Yo'li ko'chasi", neighbourhood: "Navro'z MFY", city: "Shahrisabz" }),
     "Shahrisabz, Navro'z MFY, Ipak Yo'li ko'chasi, 7-uy");
+});
+
+test("geocode: Nominatim faqat shaharni bersa, Overpass mahalla, ko'cha va uyni to'ldiradi", async () => {
+  const realFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, opts = {}) => {
+    calls.push(String(url));
+    const json = (o) => ({ ok: true, json: async () => o });
+    if (String(url).includes("nominatim")) return json({ address: { city: "Shahrisabz shahri", country: "O'zbekiston" } });
+    if (String(url).includes("overpass")) {
+      assert.match(decodeURIComponent(opts.body), /around:350,39\.09,66\.85/);
+      return json({ elements: [
+        { type: "area", tags: { name: "Qashqadaryo viloyati", admin_level: "4" } },
+        { type: "area", tags: { name: "Shahrisabz shahri", admin_level: "6" } },
+        { type: "area", tags: { name: "Navro'z MFY", admin_level: "8" } },
+        { type: "way", tags: { highway: "residential", name: "Uzoq ko'cha" }, center: { lat: 39.093, lon: 66.85 } },
+        { type: "way", tags: { highway: "residential", name: "Ipak Yo'li ko'chasi" }, center: { lat: 39.0902, lon: 66.85 } },
+        { type: "node", tags: { place: "neighbourhood", name: "Boshqa mahalla" }, lat: 39.095, lon: 66.85 },
+        { type: "way", tags: { building: "house", "addr:housenumber": "17" }, center: { lat: 39.09001, lon: 66.85 } },
+      ] });
+    }
+    return { ok: false, json: async () => ({}) };
+  };
+  try {
+    const deps = makeDeps({ BOT_TOKEN: "x", SUPABASE_URL: "https://s.example", SUPABASE_SERVICE_KEY: "k" }, {});
+    const g = await deps.geocode(39.09, 66.85);
+    assert.equal(g.text, "Shahrisabz shahri, Navro'z MFY, Ipak Yo'li ko'chasi, 17-uy");
+    assert.equal(g.mahalla, "Navro'z MFY");
+    assert.ok(calls.some((u) => u.includes("overpass")));
+    const n = calls.length;
+    await deps.geocode(39.09, 66.85);                   // kesh: qayta so'rov yo'q
+    assert.equal(calls.length, n);
+  } finally { globalThis.fetch = realFetch; }
 });
