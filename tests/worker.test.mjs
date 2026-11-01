@@ -143,7 +143,10 @@ test("mijoz boti: ro'yxat (ism -> telefon -> joylashuv), menyu, mini app tugmasi
   const appBtn = t.client.last(700).reply_markup.inline_keyboard[0][0];
   assert.match(appBtn.web_app.url, /^https:\/\/zamzam-water\.onrender\.com\/\?api=https%3A%2F%2Fbot\.example\.com/);
   // Telegram ismi o'zgarsa ham ro'yxatdagi ism saqlanadi
-  await t.app.onClientUpdate(msg(700, { text: "💧 Buyurtma berish" }));
+  assert.deepEqual(menuMsg.reply_markup.keyboard.flat().map((b) => b.text), ["▶️ Boshlash", "📦 Buyurtmalarim", "📞 Aloqa"]);
+  await t.app.onClientUpdate(msg(700, { text: "▶️ Boshlash" }));
+  assert.ok(t.client.last(700).reply_markup.inline_keyboard[0][0].web_app);
+  await t.app.onClientUpdate(msg(700, { text: "💧 Buyurtma berish" }));          // eski klaviatura ham ishlaydi
   assert.ok(t.client.last(700).reply_markup.inline_keyboard[0][0].web_app);
   assert.equal(t.sql("SELECT full_name FROM users WHERE tg_id=700"), "Aziz Karimov");
   assert.equal(t.staff.calls.length, 0);                                         // mijoz boti xodimlar botiga yozmaydi

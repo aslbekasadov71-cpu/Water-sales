@@ -72,7 +72,7 @@ const LIVE_HELP =
   "Bir marta yoqsangiz kun bo'yi o'zi yangilanib turadi. Ish tugagach to'xtatishingiz mumkin.";
 
 const B = {
-  order: "💧 Buyurtma berish", myOrders: "📦 Buyurtmalarim", contact: "📞 Aloqa", phone: "📱 Raqamni yuborish",
+  order: "💧 Buyurtma berish", start: "▶️ Boshlash", myOrders: "📦 Buyurtmalarim", contact: "📞 Aloqa", phone: "📱 Raqamni yuborish",
   location: "📍 Joylashuvni yuborish",
   online: "🟢 Ishni boshlash", refresh: "📍 Joylashuvni yangilash", offline: "🔴 Ishni tugatish", active: "📋 Faol buyurtmalarim",
   today: "📊 Mening hisobim", logout: "🚪 Chiqish", panel: "🛠 Boshqaruv paneli",
@@ -142,7 +142,7 @@ export function createApp(deps) {
     [{ text: online ? B.offline : B.online }], ...(online ? [[{ text: B.live }]] : []),
     [{ text: B.active }, { text: B.today }], [{ text: B.board }], [{ text: B.logout }]]);
   const ownerMenu = () => reply([[{ text: B.panel }]]);
-  const clientMenu = () => reply([[{ text: B.order }], [{ text: B.myOrders }, { text: B.contact }]]);
+  const clientMenu = () => reply([[{ text: B.start }], [{ text: B.myOrders }, { text: B.contact }]]);
 
   // «📦 Buyurtmalarim» — ro'yxat shu yerning o'zida, chatda ko'rinadi
   async function showClientOrders(uid) {
@@ -396,12 +396,16 @@ export function createApp(deps) {
       await rpc("client_register", { tg_id: from.id, lat: msg.location.latitude, lon: msg.location.longitude });
       return C.send(from.id, "📍 Manzilingiz yangilandi. Keyingi buyurtmada shu manzil tanlanadi.", { reply_markup: clientMenu() });
     }
-    if (text.startsWith("/start")) return welcomeClient(from.id, user.full_name);
-    if (text && !text.startsWith("/") && ![B.order, B.myOrders, B.contact].includes(text)) {
+    if (text.startsWith("/start") || text === B.start) return welcomeClient(from.id, user.full_name);
+    if (text && !text.startsWith("/") && ![B.order, B.start, B.myOrders, B.contact].includes(text)) {
       const sess = (await rpc("get_session", { tg_id: -from.id }))?.data;
       if (sess?.flow === "dispute") return onDisputeNote(from, sess.order_id, text);
     }
-    if (text === B.order) return C.send(from.id, "Mahsulotni tanlash va manzilni tasdiqlash uchun 👇", { reply_markup: clientAppKb("", "💧 Katalogni ochish") });
+    // eski klaviaturasi qolgan mijozlar uchun: buyurtma oynasini ochib, yangi menyuni ham beradi
+    if (text === B.order) {
+      await C.send(from.id, "Menyu yangilandi 👇", { reply_markup: clientMenu() });
+      return C.send(from.id, "Mahsulotni tanlash uchun 👇", { reply_markup: clientAppKb("", "💧 Katalogni ochish") });
+    }
     if (text === B.myOrders) return showClientOrders(from.id);
     if (text === B.contact) {
       const st = (await rpc("client_me", { tg_id: from.id })).settings;
