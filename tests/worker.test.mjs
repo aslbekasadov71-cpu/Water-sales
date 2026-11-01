@@ -23,7 +23,7 @@ function freshDb() {
   for (const role of ["anon", "authenticated", "service_role"]) {
     spawnSync("psql", ["-h", HOST, "-U", "postgres", "-d", "postgres", "-qc", `CREATE ROLE ${role} NOLOGIN`], { encoding: "utf8" });
   }
-  for (const f of ["supabase/schema.sql", "supabase/002_v2.sql", "supabase/003_v3.sql", "supabase/004_v3_1.sql", "supabase/005_no_gps.sql", "supabase/006_honesty.sql", "supabase/007_rating_v2.sql", "supabase/008_back_to_v2.sql", "supabase/009_v5.sql", "supabase/010_live.sql"]) {
+  for (const f of ["supabase/schema.sql", "supabase/002_v2.sql", "supabase/003_v3.sql", "supabase/004_v3_1.sql", "supabase/005_no_gps.sql", "supabase/006_honesty.sql", "supabase/007_rating_v2.sql", "supabase/008_back_to_v2.sql", "supabase/009_v5.sql", "supabase/010_live.sql", "supabase/011_staff_creds.sql"]) {
     const r = spawnSync("psql", ["-h", HOST, "-U", "postgres", "-d", db, "-v", "ON_ERROR_STOP=1", "-q", "-f", f], { encoding: "utf8" });
     if (r.status !== 0) throw new Error(f + ": " + r.stderr);
   }
@@ -670,4 +670,38 @@ test("mijoz: «📦 Buyurtmalarim» ro'yxatni chatning o'zida ko'rsatadi", async
   assert.match(m.text, /Yo'lda/);
   assert.match(m.text, /Dostavchi\d+/);
   assert.match(m.reply_markup.inline_keyboard[0][0].text, /xaritada/);
+});
+
+test("rahbar xodimga yangi login va parol beradi — eskisi ishlamaydi, xodim qayta kiradi", async () => {
+  const t = setup();
+  const created = await admin(t, { action: "a_staff_create", full_name: "Jasur", phone: "901112233", login: "jasur", password: "maxfiy123", role: "courier" });
+  await t.app.onStaffUpdate(msg(900, { text: "/start" }));
+  await t.app.onStaffUpdate(msg(900, { text: "jasur" }));
+  await t.app.onStaffUpdate(msg(900, { text: "maxfiy123" }));
+  assert.equal(t.sql("SELECT tg_id FROM staff WHERE login='jasur'"), "900");
+  const id = Number(t.sql("SELECT id FROM staff WHERE login='jasur'"));
+  // faqat rahbar
+  assert.deepEqual(await t.app.api({ action: "a_staff_update", id, op: "creds", login: "x1", password: "yangi12345" }, user(900), "staff"), { error: "Ruxsat yo'q" });
+  assert.match((await admin(t, { action: "a_staff_update", id, op: "creds", login: "ab", password: "yangi12345" })).error, /Login/);
+  assert.match((await admin(t, { action: "a_staff_update", id, op: "creds", login: "jasur2", password: "123" })).error, /6 belgi/);
+  const r = await admin(t, { action: "a_staff_update", id, op: "creds", login: "Jasur2", password: "yangi12345", full_name: "Jasur Aliyev" });
+  assert.equal(r.ok, true);
+  assert.equal(r.login, "jasur2");
+  assert.equal(t.sql(`SELECT login || '|' || full_name || '|' || coalesce(tg_id::text,'-') FROM staff WHERE id=${id}`), "jasur2|Jasur Aliyev|-");
+  assert.match(t.staff.last(900).text, /yangi login va parol/);
+  // eski login endi ishlamaydi
+  await t.app.onStaffUpdate(msg(900, { text: "/start" }));
+  await t.app.onStaffUpdate(msg(900, { text: "jasur" }));
+  await t.app.onStaffUpdate(msg(900, { text: "maxfiy123" }));
+  assert.equal(t.sql("SELECT count(*) FROM staff WHERE tg_id=900"), "0");
+  // yangisi ishlaydi
+  await t.app.onStaffUpdate(msg(900, { text: "/start" }));
+  await t.app.onStaffUpdate(msg(900, { text: "jasur2" }));
+  await t.app.onStaffUpdate(msg(900, { text: "yangi12345" }));
+  assert.equal(t.sql("SELECT tg_id FROM staff WHERE login='jasur2'"), "900");
+  assert.equal(t.sql("SELECT is_active FROM couriers WHERE tg_id=900"), "t");
+  // band login
+  await admin(t, { action: "a_staff_create", full_name: "Vali", login: "vali", password: "maxfiy123", role: "courier" });
+  assert.match((await admin(t, { action: "a_staff_update", id, op: "creds", login: "vali", password: "yangi12345" })).error, /band/);
+  assert.ok(created.ok || created.id);
 });

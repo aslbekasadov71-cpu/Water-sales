@@ -135,4 +135,4 @@ Jonli joylashuv (oxirgi 15 daqiqa) bo'lsa — shu nuqta. Bo'lmasa dostavchining 
 
 ## Xarita
 Mini app'da [OpenFreeMap](https://openfreemap.org) (OpenStreetMap ma'lumotlari, MapLibre) ishlatiladi — bepul, kalit kerak emas, tijoriy foydalanishga ruxsat bor. Pin ostidagi ko'cha/uy raqami OpenStreetMap Nominatim orqali aniqlanadi.
-Bazaga ketma-ket `004_v3_1.sql`, `005_no_gps.sql`, `006_honesty.sql`, `007_rating_v2.sql`, `008_back_to_v2.sql`, `009_v5.sql`, `010_live.sql` ham qo'llanadi. Storage: `products` va `banners` (public) bucketlari.
+Bazaga ketma-ket `004_v3_1.sql`, `005_no_gps.sql`, `006_honesty.sql`, `007_rating_v2.sql`, `008_back_to_v2.sql`, `009_v5.sql`, `010_live.sql`, `011_staff_creds.sql` ham qo'llanadi. Storage: `products` va `banners` (public) bucketlari.

@@ -515,7 +515,7 @@ function openStaff(id) {
       <div id="dbody"><div class="skel" style="height:100px"></div></div>`; })() : ""}
     <div class="list">
       ${x.phone ? `<a class="row" href="tel:${tel(x.phone)}" style="color:inherit;text-decoration:none"><div class="ic ok">${ic("phone-calling-bold", 20)}</div><div class="grow"><b>Qo'ng'iroq qilish</b><small>${esc(x.phone)}</small></div></a>` : ""}
-      <div class="row" onclick="resetPw(${id})"><div class="ic">${ic("key-bold", 20)}</div><div class="grow"><b>Yangi parol berish</b><small>Eski parol ishlamay qoladi</small></div></div>
+      <div class="row" onclick="newCreds(${id})"><div class="ic">${ic("key-bold", 20)}</div><div class="grow"><b>Yangi login va parol berish</b><small>Eskisi ishlamay qoladi, botga qayta kiradi</small></div></div>
       ${x.tg_id ? `<div class="row" onclick="staffOp(${id},'unbind')"><div class="ic warn">${ic("logout-2-bold", 20)}</div><div class="grow"><b>Tizimdan chiqarish</b><small>Qayta login-parol bilan kiradi</small></div></div>` : ""}
       <div class="row" onclick="staffOp(${id},'toggle')"><div class="ic ${x.is_active ? "red" : "ok"}">${ic(x.is_active ? "pause-circle-bold" : "play-circle-bold", 20)}</div>
         <div class="grow"><b>${x.is_active ? "To'xtatish" : "Faollashtirish"}</b><small>${x.is_active ? "Botga kira olmaydi, buyurtma bormaydi" : "Yana ishlay oladi"}</small></div></div>
@@ -572,6 +572,29 @@ function showCredentials(name, login, password) {
 }
 function shareCred() { const u = `https://t.me/share/url?url=${encodeURIComponent(" ")}&text=${encodeURIComponent(S.cred)}`; tgw.openTelegramLink ? tgw.openTelegramLink(u) : window.open(u); }
 function copyCred() { navigator.clipboard?.writeText(S.cred).then(() => toast("Nusxa olindi"), () => toast("Nusxa olib bo'lmadi")); }
+function newCreds(id) {
+  const x = S.staff.staff.find((s) => s.id === id);
+  sheet(`<h3>Yangi login va parol</h3><div class="sub">${esc(x.full_name)} · hozirgi login: <b>${esc(x.login)}</b></div>
+    <label class="lb">Ism familiya</label><input class="in" id="cname" maxlength="80" value="${esc(x.full_name)}">
+    <label class="lb">Telefon</label><input class="in" id="cphone" inputmode="tel" maxlength="20" value="${esc(x.phone || "")}">
+    <label class="lb">Yangi login</label><input class="in" id="clogin" maxlength="32" autocapitalize="off" value="${esc(x.login)}">
+    <label class="lb">Yangi parol</label><div style="display:flex;gap:8px"><input class="in" id="cpw" value="${genPassword()}" autocapitalize="off" style="flex:1">
+      <button class="pill" style="height:48px" onclick="$('cpw').value=genPassword()">${ic("refresh-bold", 16)}</button></div>
+    <div class="note">Saqlangach eski login-parol ishlamaydi. ${x.tg_id ? "Xodim botdan chiqariladi va yangi login-parol bilan qayta kiradi." : ""}</div>
+    <button class="btn b" style="margin-top:12px" onclick="saveCreds(${id})">${ic("key-bold", 20)} Saqlash</button>`);
+}
+async function saveCreds(id) {
+  const body = { id, op: "creds", login: $("clogin").value.trim(), password: $("cpw").value.trim(),
+    full_name: $("cname").value.trim(), phone: $("cphone").value.trim() };
+  if (body.full_name.length < 3) return toast("Ism familiyani kiriting");
+  if (!/^[A-Za-z0-9_.]{3,32}$/.test(body.login)) return toast("Login: kamida 3 ta lotin harf yoki raqam");
+  if (body.password.length < 6) return toast("Parol kamida 6 belgi bo'lsin");
+  const r = await run(() => call("a_staff_update", body));
+  if (!r) return;
+  closeAll(); await refresh(); S.staff = await call("a_staff").catch(() => S.staff);
+  sheet(""); showCredentials(body.full_name, r.login || body.login.toLowerCase(), body.password);
+  if (S.tab === "team") renderTeam();
+}
 function resetPw(id) {
   const x = S.staff.staff.find((s) => s.id === id);
   sheet(`<h3>Yangi parol</h3><div class="sub">${esc(x.full_name)} uchun</div>

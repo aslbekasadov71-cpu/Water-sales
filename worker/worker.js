@@ -946,9 +946,10 @@ export function createApp(deps) {
         phone: normPhone(body.phone), role: body.role, pass_hash: h.hash, pass_salt: h.salt });
     }
     if (a === "a_staff_update") {
-      if (!["toggle", "reset", "unbind"].includes(body.op)) return { error: "Noma'lum amal" };
+      if (!["toggle", "reset", "unbind", "creds"].includes(body.op)) return { error: "Noma'lum amal" };
       const p = { actor: uid, id: body.id, op: body.op };
-      if (body.op === "reset") {
+      if (body.op === "creds") { p.login = body.login; p.full_name = body.full_name || ""; p.phone = body.phone ? normPhone(body.phone) : ""; }
+      if (body.op === "reset" || body.op === "creds") {
         const pw = String(body.password || "");
         if (pw.length < 6) return { error: "Parol kamida 6 belgi bo'lsin" };
         const h = await hashPassword(pw);
@@ -959,7 +960,8 @@ export function createApp(deps) {
       ownerCache = null;
       if (r.ok && r.tg_id && body.op !== "reset") {
         await tgS("setChatMenuButton", { chat_id: r.tg_id, menu_button: { type: "commands" } });
-        await S.send(r.tg_id, body.op === "unbind" ? "ℹ️ Sizni tizimdan chiqarishdi. Qayta kirish uchun /start." :
+        await S.send(r.tg_id, body.op === "creds" ? "🔑 Rahbar sizga yangi login va parol berdi. Kirish uchun /start ni bosing va yangi login-parolni kiriting." :
+          body.op === "unbind" ? "ℹ️ Sizni tizimdan chiqarishdi. Qayta kirish uchun /start." :
           "ℹ️ Hisobingiz holati o'zgartirildi.", { reply_markup: { remove_keyboard: true } });
       }
       return r;
