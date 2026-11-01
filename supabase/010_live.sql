@@ -124,7 +124,7 @@ CREATE OR REPLACE FUNCTION stale_couriers(p jsonb) RETURNS jsonb LANGUAGE sql AS
     WITH x AS (
         UPDATE couriers c SET stale_notified = TRUE
         WHERE c.is_online AND c.is_active AND NOT c.stale_notified
-          AND NOT (c.loc_source = 'gps' AND c.location_at > now() - interval '15 minutes')
+          AND NOT COALESCE(c.loc_source = 'gps' AND c.location_at > now() - interval '15 minutes', FALSE)
           AND EXISTS (SELECT 1 FROM shifts s WHERE s.courier_id = c.tg_id AND s.ended_at IS NULL
                       AND s.started_at < now() - interval '3 minutes')
         RETURNING c.tg_id)
