@@ -893,6 +893,20 @@ export function createApp(deps) {
     await rpc("upsert_user", { tg_id: uid, full_name: [user.first_name, user.last_name].filter(Boolean).join(" "), username: user.username || null });
 
     // --- mijoz ---
+    if (a === "call") {
+      const me = await rpc("client_me", { tg_id: uid });
+      let phone = "", name = "";
+      if (body.kind === "support") { phone = me?.settings?.support_phone || ""; name = "ZamZam"; }
+      else {
+        const o = (me?.orders || []).find((x) => x.id === Number(body.order_id));
+        if (!o || !o.courier?.phone || !["accepted", "delivered"].includes(o.status)) return { error: "Raqam topilmadi" };
+        phone = o.courier.phone; name = `${o.courier.name || "Dostavchi"} (ZamZam dostavchisi)`;
+      }
+      phone = normPhone(phone);
+      if (!phone) return { error: "Raqam topilmadi" };
+      await tgC("sendContact", { chat_id: uid, phone_number: phone, first_name: name.slice(0, 60) });
+      return { ok: true };
+    }
     if (a === "geo") {
       const lat = Number(body.lat), lon = Number(body.lon);
       if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { error: "Koordinata noto'g'ri" };
@@ -1040,6 +1054,12 @@ export function createApp(deps) {
       for (const p of r.pending || []) await S.edit(p.courier_id, p.message_id, `❌ Buyurtma #${body.order_id} bekor qilindi.`);
       if (r.prev_status === "accepted" && r.courier_id) await S.send(r.courier_id, `❌ Buyurtma #${body.order_id} bekor qilindi. Bormang.`);
       await C.send(r.client_id, `❌ Buyurtma #${body.order_id} bekor qilindi.\nSabab: ${esc(reason)}`);
+      return { ok: true };
+    }
+    if (a === "a_call") {
+      const phone = normPhone(body.phone);
+      if (phone.length < 8) return { error: "Raqam noto'g'ri" };
+      await tgS("sendContact", { chat_id: uid, phone_number: phone, first_name: String(body.name || "Kontakt").slice(0, 60) });
       return { ok: true };
     }
     if (a === "a_staff") return { ...(await rpc("admin_staff_list", {})), bot: await staffBotUsername() };

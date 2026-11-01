@@ -392,7 +392,7 @@ function renderCatalog() {
   $("app").innerHTML = `
     <div class="top">
       <button class="addr-chip" onclick="openCheckout(true)">${ic("map-point-bold", 18)}<span>${esc(S.address || "Manzilni belgilang")}</span>${ic("alt-arrow-down-linear", 16)}</button>
-      ${s.support_phone ? `<a class="pill" href="tel:${esc(String(s.support_phone).replace(/\s/g, ""))}">${ic("phone-calling-bold", 16)}</a>` : ""}
+      ${s.support_phone ? `<button class="pill" onclick="callTo('support')">${ic("phone-calling-bold", 16)}</button>` : ""}
     </div>
     ${liveHtml}
     ${bannersHtml()}
@@ -763,7 +763,7 @@ function renderSheet(o) {
       ${ago != null && ago >= 5 ? `<div class="stale">Dostavchi joylashuvi ${ago} daqiqa oldin yangilangan</div>` : ""}
       <div class="courier"><div class="ava">${esc(initials)}<i>${ic("verified-check-bold", 16)}</i></div>
         <div class="grow"><b>${esc(c.name || "Dostavchi")}</b><small>ZamZam dostavchisi</small><span class="plate">${ic("bottle-linear", 12)} ZAMZAM</span></div></div>
-      <div class="acts">${c.phone ? `<a class="act" href="tel:${esc(c.phone)}">${ic("phone-calling-bold", 24)}Qo'ng'iroq</a>` : ""}
+      <div class="acts">${c.phone ? `<button class="act" onclick="callTo('courier', ${o.id})">${ic("phone-calling-bold", 24)}Qo'ng'iroq</button>` : ""}
         ${e ? `<button class="act" onclick="fitTrack(true)">${ic("map-point-wave-bold", 24)}Xaritada</button>` : ""}
         <button class="act" onclick="pollTrack(true)">${ic("refresh-bold", 24)}Yangilash</button></div>
       ${details}`;
@@ -823,7 +823,7 @@ function renderOrders() {
         ${(o.notes || []).filter((n) => n.kind === "defective").map((n) => `<div class="note">${n.volume_l} L × ${n.qty} yaroqsiz tara qabul qilinmadi: ${esc(n.text)}</div>`).join("")}
         ${confirmBox(o)}
         ${o.courier && o.status !== "cancelled" ? `<div class="crow">${ic("delivery-bold-duotone", 24)}<div class="grow"><b>${esc(o.courier.name)}</b><small>Dostavchi</small></div>
-          ${o.courier.phone && live ? `<a class="pill" href="tel:${esc(String(o.courier.phone).replace(/[^\d+]/g, ""))}">${ic("phone-calling-bold", 16)} Qo'ng'iroq</a>` : ""}</div>` : ""}
+          ${o.courier.phone && live ? `<button class="pill" onclick="callTo('courier', ${o.id})">${ic("phone-calling-bold", 16)} Qo'ng'iroq</button>` : ""}</div>` : ""}
         ${["new", "offered", "unassigned"].includes(o.status) ? `<button class="btn red full sm" style="margin-top:10px" onclick="cancelOrder(${o.id})">${ic("close-circle-bold", 18)} Bekor qilish</button>` : ""}
         ${live ? `<button class="btn b full sm" style="margin-top:10px" onclick="openTrack(${o.id})">${ic("map-point-wave-bold", 18)} ${o.status === "accepted" ? "Xaritada kuzatish" : "Holatini ko'rish"}</button>`
                : `<button class="btn full sm" style="margin-top:10px" onclick="reorder(${o.id})">${ic("restart-bold", 18)} Takrorlash</button>`}
@@ -860,7 +860,7 @@ function renderProfile() {
     <div class="mrow" onclick="editName()"><div class="mi">${ic("user-bold", 22)}</div><div class="grow"><b>Ism-familiya</b><small>${esc(u.name)}</small></div>${ic("pen-bold", 18)}</div>
     <div class="mrow" style="cursor:default"><div class="mi">${ic("phone-bold", 22)}</div><div class="grow"><b>Telefon</b><small>${esc(u.phone)}</small></div></div>
     <div class="mrow" onclick="openCheckout(true)"><div class="mi">${ic("map-point-bold", 22)}</div><div class="grow"><b>Yetkazish manzili</b><small>${esc(S.address || "belgilanmagan")}</small></div>${ic("alt-arrow-right-linear", 18)}</div>
-    ${st.support_phone ? `<a class="mrow" href="tel:${esc(String(st.support_phone).replace(/[^\d+]/g, ""))}"><div class="mi">${ic("phone-calling-bold", 22)}</div><div class="grow"><b>Qo'llab-quvvatlash</b><small>${esc(st.support_phone)}</small></div>${ic("alt-arrow-right-linear", 18)}</a>` : ""}
+    ${st.support_phone ? `<a class="mrow" onclick="callTo('support')" style="cursor:pointer"><div class="mi">${ic("phone-calling-bold", 22)}</div><div class="grow"><b>Qo'llab-quvvatlash</b><small>${esc(st.support_phone)}</small></div>${ic("alt-arrow-right-linear", 18)}</a>` : ""}
     <small style="margin:14px 4px">Yaroqsiz (darz ketgan, iflos) idishlar qabul qilinmaydi. Telefon raqamini o'zgartirish uchun qo'llab-quvvatlashga qo'ng'iroq qiling.</small>`;
 }
 function editName() {
@@ -940,6 +940,24 @@ function modal(html) {
   m.innerHTML = `<div>${html}</div>`;
   m.onclick = (e) => { if (e.target === m) closeModal(); };
   document.body.appendChild(m);
+}
+// Telegram ichida tel: havolalari ishlamaydi — raqamni bot chatga kontakt qilib yuboradi, bosilsa qo'ng'iroq bo'ladi
+async function callTo(kind, orderId) {
+  haptic("medium");
+  const o = orderId ? (S.me.orders || []).find((x) => x.id === orderId) : null;
+  const phone = kind === "courier" ? o?.courier?.phone : S.me.settings?.support_phone;
+  const name = kind === "courier" ? (o?.courier?.name || "Dostavchi") : "ZamZam";
+  if (!phone) return toast("Raqam topilmadi");
+  let sent = false;
+  try { sent = (await call("call", { kind, order_id: orderId || null }))?.ok; } catch {}
+  modal(`<div style="text-align:center;padding:6px 0 2px">
+      <div class="okbig" style="background:var(--bl);color:var(--b)">${ic("phone-calling-bold", 40)}</div>
+      <h2 style="margin:10px 0 4px">${esc(name)}</h2>
+      <div style="font-size:24px;font-weight:800;letter-spacing:.02em;margin-bottom:6px;user-select:all">${esc(phone)}</div>
+      <div class="mute" style="margin-bottom:14px">${sent ? "Raqam bot chatiga yuborildi — chatga qaytib, raqamni bosing va qo'ng'iroq qiling." : "Raqamni nusxalab, qo'ng'iroq qiling."}</div>
+      ${sent ? `<button class="btn b full" onclick="try{tgw.close()}catch{}">${ic("chat-round-call-bold", 20)} Chatga o'tib qo'ng'iroq qilish</button>` : ""}
+      <button class="btn full" style="margin-top:8px" onclick="navigator.clipboard?.writeText('${esc(phone)}').then(()=>toast('Nusxa olindi'),()=>toast('Nusxa olib bo\\'lmadi'))">${ic("copy-bold", 20)} Nusxa olish</button>
+      <button class="btn full" style="margin-top:8px;background:none;border:0" onclick="closeModal()">Yopish</button></div>`);
 }
 function closeModal() { const m = $("modal"); if (m) m.remove(); }
 

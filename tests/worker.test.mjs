@@ -773,3 +773,21 @@ test("geocode: Nominatim faqat shaharni bersa, Overpass mahalla, ko'cha va uyni 
     assert.equal(calls.length, n);
   } finally { globalThis.fetch = realFetch; }
 });
+
+test("qo'ng'iroq: dostavchi raqami mijoz chatiga kontakt bo'lib boradi; begona buyurtma — yo'q", async () => {
+  const t = setup();
+  await seed(t);
+  const r = await placeOrder(t, { 3: 1 });
+  assert.match((await t.app.api({ action: "call", kind: "courier", order_id: r.id }, user(CLIENT), "client")).error, /topilmadi/);
+  await t.app.onStaffUpdate(cb(C_NEAR, `acc:${r.id}`));
+  assert.deepEqual(await t.app.api({ action: "call", kind: "courier", order_id: r.id }, user(CLIENT), "client"), { ok: true });
+  const c = t.client.calls.filter((x) => x.method === "sendContact").at(-1);
+  assert.equal(c.chat_id, CLIENT);
+  assert.equal(c.phone_number, `+99890${C_NEAR}`);
+  assert.match(c.first_name, /Dostavchi/);
+  assert.match((await t.app.api({ action: "call", kind: "courier", order_id: r.id }, user(999), "client")).error, /topilmadi/);
+  // rahbar paneli
+  assert.deepEqual(await t.app.api({ action: "a_call", phone: "+998 90 111 22 33", name: "Ali" }, user(CLIENT), "staff"), { error: "Ruxsat yo'q" });
+  assert.deepEqual(await admin(t, { action: "a_call", phone: "+998 90 111 22 33", name: "Ali" }), { ok: true });
+  assert.equal(t.staff.calls.filter((x) => x.method === "sendContact").at(-1).phone_number, "+998901112233");
+});

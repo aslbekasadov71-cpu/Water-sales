@@ -172,6 +172,17 @@ const sinceMin = (iso) => (iso ? (Date.now() - new Date(iso)) / 60000 : 0);
 const initials = (n) => String(n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const mapLink = (lat, lon) => `https://yandex.uz/maps/?pt=${lon},${lat}&z=17&l=map`;
 const tel = (p) => String(p || "").replace(/[^\d+]/g, "");
+const jsq = (t) => String(t || "").replace(/[\\'"`]/g, "");
+// Telegram ichida tel: ishlamaydi — xodimlar boti raqamni kontakt qilib yuboradi
+async function callTo(phone, name) {
+  if (!phone) return toast("Raqam yo'q");
+  haptic();
+  const r = await call("a_call", { phone, name }).catch(() => null);
+  sheet(`<h3>${esc(name)}</h3><div class="pw" style="user-select:all">${esc(phone)}</div>
+    <div class="sub">${r?.ok ? "Raqam xodimlar botiga yuborildi — chatga o'tib, raqamni bosing." : "Raqamni nusxalab qo'ng'iroq qiling."}</div>
+    ${r?.ok ? `<button class="btn b" onclick="try{tgw.close()}catch{}">${ic("phone-calling-bold", 20)} Chatga o'tib qo'ng'iroq qilish</button>` : ""}
+    <button class="btn" style="margin-top:8px" onclick="navigator.clipboard?.writeText('${esc(phone)}').then(()=>toast('Nusxa olindi'),()=>{})">${ic("copy-bold", 20)} Nusxa olish</button>`);
+}
 function genPassword() {
   const abc = "abcdefghjkmnpqrstuvwxyz23456789";
   return [...crypto.getRandomValues(new Uint8Array(8))].map((x) => abc[x % abc.length]).join("");
@@ -372,11 +383,11 @@ async function openOrder(id) {
     <div class="timeline">${steps.map(([t, at, on], i) => `<div class="${on ? (cancelled && i === 2 ? "on red" : "on") : ""}"><i></i>${t}<br><span class="mute">${on && at ? fmtTime(at) : "—"}</span></div>`).join("")}</div>
     <div class="list">
       <div class="row"><div class="ic">${ic("user-bold", 20)}</div><div class="grow"><b>${o.client?.business ? esc(o.client.business) + " · " : ""}${esc(o.client?.name)}</b><small>${esc(o.phone)}</small></div>
-        <a class="pill" href="tel:${tel(o.phone)}">${ic("phone-calling-bold", 16)}</a></div>
-      <a class="row" href="${mapLink(o.lat, o.lon)}" target="_blank" style="color:inherit;text-decoration:none"><div class="ic">${ic("map-point-bold", 20)}</div>
+        <button class="pill" onclick="callTo('${tel(o.phone)}','${esc(jsq(o.client?.name || "Mijoz"))}')">${ic("phone-calling-bold", 16)}</button></div>
+      <a class="row" onclick="tgw.openLink('${mapLink(o.lat, o.lon)}')" style="color:inherit;text-decoration:none;cursor:pointer"><div class="ic">${ic("map-point-bold", 20)}</div>
         <div class="grow"><b>${esc(o.address) || "Xaritadagi nuqta"}</b><small>${esc(o.time) || "vaqt ko'rsatilmagan"} · xaritada ochish</small></div>${ic("arrow-right-up-linear", 18)}</a>
       ${o.courier ? `<div class="row"><div class="ava">${esc(initials(o.courier.name))}</div><div class="grow"><b>${esc(o.courier.name)}</b><small>Dostavchi${o.accepted_at ? " · " + fmtTime(o.accepted_at) + " da oldi" : ""}</small></div>
-        ${o.courier.phone ? `<a class="pill" href="tel:${tel(o.courier.phone)}">${ic("phone-calling-bold", 16)}</a>` : ""}</div>` : ""}
+        ${o.courier.phone ? `<button class="pill" onclick="callTo('${tel(o.courier.phone)}','${esc(jsq(o.courier.name))}')">${ic("phone-calling-bold", 16)}</button>` : ""}</div>` : ""}
       ${offered ? `<div class="row"><div class="ic warn">${ic("hourglass-bold", 20)}</div><div class="grow"><b>${esc(offered.name)}</b><small>Taklif yuborilgan, javob kutilmoqda</small></div></div>` : ""}
     </div>
     <div class="card pad">
@@ -514,7 +525,7 @@ function openStaff(id) {
       <div class="seg" id="dseg"><button class="on" onclick="segPick(this);courierTab(${x.tg_id},'orders')">Buyurtmalar</button><button onclick="segPick(this);courierTab(${x.tg_id},'shifts')">Smenalar</button><button onclick="segPick(this);courierTab(${x.tg_id},'cash')">Kassa</button></div>
       <div id="dbody"><div class="skel" style="height:100px"></div></div>`; })() : ""}
     <div class="list">
-      ${x.phone ? `<a class="row" href="tel:${tel(x.phone)}" style="color:inherit;text-decoration:none"><div class="ic ok">${ic("phone-calling-bold", 20)}</div><div class="grow"><b>Qo'ng'iroq qilish</b><small>${esc(x.phone)}</small></div></a>` : ""}
+      ${x.phone ? `<a class="row" onclick="callTo('${tel(x.phone)}','${esc(jsq(x.full_name))}')" style="color:inherit;text-decoration:none"><div class="ic ok">${ic("phone-calling-bold", 20)}</div><div class="grow"><b>Qo'ng'iroq qilish</b><small>${esc(x.phone)}</small></div></a>` : ""}
       <div class="row" onclick="newCreds(${id})"><div class="ic">${ic("key-bold", 20)}</div><div class="grow"><b>Yangi login va parol berish</b><small>Eskisi ishlamay qoladi, botga qayta kiradi</small></div></div>
       ${x.tg_id ? `<div class="row" onclick="staffOp(${id},'unbind')"><div class="ic warn">${ic("logout-2-bold", 20)}</div><div class="grow"><b>Tizimdan chiqarish</b><small>Qayta login-parol bilan kiradi</small></div></div>` : ""}
       <div class="row" onclick="staffOp(${id},'toggle')"><div class="ic ${x.is_active ? "red" : "ok"}">${ic(x.is_active ? "pause-circle-bold" : "play-circle-bold", 20)}</div>
@@ -647,7 +658,7 @@ async function openClient(id, replace) {
       <div class="kpi" style="min-height:0"><div class="t">Qarzi</div><div class="v ${Number(c.debt) > 0 ? "red" : "ok"}">${money(c.debt)}</div></div>
       <div class="kpi" style="min-height:0"><div class="t">Idishlari</div><div class="v">${c.bottles.reduce((s, b) => s + b.balance, 0)} ta</div><div class="s">${c.bottles.map((b) => `${b.volume_l}L: ${b.balance}`).join(" · ") || "—"}</div></div></div>
     <div class="list">
-      <a class="row" href="tel:${tel(c.phone)}" style="color:inherit;text-decoration:none"><div class="ic ok">${ic("phone-calling-bold", 20)}</div><div class="grow"><b>Qo'ng'iroq qilish</b><small>${esc(c.phone)}</small></div></a>
+      <a class="row" onclick="callTo('${tel(c.phone)}','${esc(jsq(c.business || c.name))}')" style="color:inherit;text-decoration:none"><div class="ic ok">${ic("phone-calling-bold", 20)}</div><div class="grow"><b>Qo'ng'iroq qilish</b><small>${esc(c.phone)}</small></div></a>
       <div class="row" onclick="debtPrompt(${id},'payment')"><div class="ic ok">${ic("wallet-money-bold", 20)}</div><div class="grow"><b>Qarz to'lovini qabul qilish</b><small>Mijoz qarzini to'ladi</small></div></div>
       <div class="row" onclick="debtPrompt(${id},'debt')"><div class="ic red">${ic("pen-new-square-bold", 20)}</div><div class="grow"><b>Qarz yozish</b><small>Qo'lda qarz qo'shish</small></div></div>
       ${S.d.products.some((p) => p.returnable) ? `<div class="row" onclick="adjustBottle(${id})"><div class="ic">${ic("bottle-bold", 20)}</div><div class="grow"><b>Idish sonini tuzatish</b><small>Masalan, mijoz idishni o'zi olib kelgan bo'lsa</small></div></div>` : ""}
