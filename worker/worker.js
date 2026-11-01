@@ -144,6 +144,35 @@ export function createApp(deps) {
   const ownerMenu = () => reply([[{ text: B.panel }]]);
   const clientMenu = () => reply([[{ text: B.order }], [{ text: B.myOrders }, { text: B.contact }]]);
 
+  // «📦 Buyurtmalarim» — ro'yxat shu yerning o'zida, chatda ko'rinadi
+  async function showClientOrders(uid) {
+    const me = await rpc("client_me", { tg_id: uid });
+    const orders = me?.orders || [];
+    if (!orders.length) return C.send(uid, "Sizda hali buyurtma yo'q. Birinchi buyurtmani bering 👇", { reply_markup: clientAppKb("", "💧 Buyurtma berish") });
+    const live = orders.filter((o) => ["new", "offered", "unassigned", "accepted"].includes(o.status));
+    const done = orders.filter((o) => !live.includes(o)).slice(0, 3);
+    const short = (o) => (o.items || []).map((i) => `${esc(i.title)} × ${i.qty}`).join(", ");
+    const lines = [];
+    if (live.length) {
+      lines.push("🟢 <b>Faol buyurtmalar</b>");
+      for (const o of live) {
+        lines.push("", `<b>#${o.id}</b> · ${STATUS[o.status] || o.status}`, `${short(o)}`, `💵 ${money(o.total)} · 🕒 ${fmtTime(o.created_at)}`);
+        if (o.courier) lines.push(`🚴 ${esc(o.courier.name)}${o.courier.phone ? " · " + esc(o.courier.phone) : ""}`);
+        else lines.push("⏳ Dostavchi biriktirilmoqda…");
+      }
+    } else lines.push("Hozir faol buyurtmangiz yo'q.");
+    if (done.length) {
+      lines.push("", "📋 <b>Oxirgi buyurtmalar</b>");
+      for (const o of done) lines.push(`#${o.id} · ${STATUS[o.status] || o.status} · ${money(o.total)} · ${fmtTime(o.delivered_at || o.created_at)}`);
+    }
+    if (Number(me.debt) > 0) lines.push("", `💳 Qarzingiz: <b>${money(me.debt)}</b>`);
+    const kb = [];
+    const tracked = live.find((o) => o.status === "accepted");
+    if (tracked) kb.push([{ text: `🗺 #${tracked.id} — dostavchini xaritada ko'rish`, web_app: { url: appLink("", "orders") } }]);
+    kb.push([{ text: "📦 Batafsil ochish", web_app: { url: appLink("", "orders") } }, { text: "💧 Yangi buyurtma", web_app: { url: appLink("", "") } }]);
+    return C.send(uid, lines.join("\n"), { reply_markup: inline(kb) });
+  }
+
   async function staffBotUsername() {
     if (!staffUsername) staffUsername = (await tgS("getMe", {}))?.username || null;
     return staffUsername;
@@ -373,8 +402,7 @@ export function createApp(deps) {
       if (sess?.flow === "dispute") return onDisputeNote(from, sess.order_id, text);
     }
     if (text === B.order) return C.send(from.id, "Mahsulotni tanlash va manzilni tasdiqlash uchun 👇", { reply_markup: clientAppKb("", "💧 Katalogni ochish") });
-    if (text === B.myOrders) return C.send(from.id, "Buyurtmalaringiz va dostavchini xaritada kuzatish uchun 👇",
-      { reply_markup: clientAppKb("orders", "📦 Buyurtmalarim") });
+    if (text === B.myOrders) return showClientOrders(from.id);
     if (text === B.contact) {
       const st = (await rpc("client_me", { tg_id: from.id })).settings;
       return C.send(from.id, `📞 Savol va takliflar uchun: ${esc(st.support_phone || "tez orada qo'shiladi")}`);

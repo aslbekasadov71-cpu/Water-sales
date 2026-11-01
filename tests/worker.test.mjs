@@ -653,3 +653,18 @@ test("v6: jonli joylashuv — yo'riqnoma, qabul, 15 daqiqalik oyna va eslatma", 
   await t.app.onStaffUpdate({ update_id: uid++, edited_message: { from: user(C_NEAR), chat: { id: C_NEAR, type: "private" }, location: { latitude: 41.311, longitude: 69.281 } } });
   assert.equal(t.sql(`SELECT stale_notified FROM couriers WHERE tg_id=${C_NEAR}`), "f");
 });
+
+test("mijoz: «📦 Buyurtmalarim» ro'yxatni chatning o'zida ko'rsatadi", async () => {
+  const t = setup();
+  await seed(t);
+  await t.app.onClientUpdate(msg(CLIENT, { text: "📦 Buyurtmalarim" }));
+  assert.match(t.client.last(CLIENT).text, /hali buyurtma yo'q/);
+  const r = await placeOrder(t, { 3: 2 });
+  await t.app.onStaffUpdate(cb(C_NEAR, `acc:${r.id}`));
+  await t.app.onClientUpdate(msg(CLIENT, { text: "📦 Buyurtmalarim" }));
+  const m = t.client.last(CLIENT);
+  assert.match(m.text, new RegExp(`#${r.id}`));
+  assert.match(m.text, /Yo'lda/);
+  assert.match(m.text, /Dostavchi\d+/);
+  assert.match(m.reply_markup.inline_keyboard[0][0].text, /xaritada/);
+});
