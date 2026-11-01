@@ -3,7 +3,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { createApp, verifyInitData, hashPassword } from "../worker/worker.js";
+import { createApp, verifyInitData, hashPassword, formatAddress } from "../worker/worker.js";
 
 const HOST = process.env.TEST_PG_HOST || "/home/pgtest";
 const TOKEN = "123456:CLIENT_TOKEN";
@@ -70,6 +70,7 @@ function setup() {
     rpc, tg: (m, p) => client.call(m, p), tgStaff: (m, p) => staff.call(m, p), apiUrl: "https://bot.example.com",
     sendDocument: async (chat, name, content) => docs.push({ chat, name, content }),
     background: (p) => background.push(p),
+    geocode: async () => "Toshkent, Navro'z mahallasi, Amir Temur ko'chasi, 12-uy",
   });
   return { db, rpc, client, staff, app, docs, background, sql: (s) => psql(db, s) };
 }
@@ -134,9 +135,22 @@ test("mijoz boti: ro'yxat (ism -> telefon -> joylashuv), menyu, mini app tugmasi
   await t.app.onClientUpdate(msg(700, { contact: { user_id: 701, phone_number: "998901111111" } })); // birovning raqami
   assert.match(t.client.last(700).text, /o'zingizning/);
   await t.app.onClientUpdate(msg(700, { contact: { user_id: 700, phone_number: "998 90 123-45-67" } }));
+  // raqam darrov saqlanmaydi — avval so'raladi
+  assert.match(t.client.last(700).text, /shu raqam bo'ladimi/);
+  assert.equal(t.client.last(700).reply_markup.inline_keyboard[0][0].callback_data, "rg:pok");
+  assert.equal(t.sql("SELECT coalesce(phone,'-') FROM users WHERE tg_id=700"), "-");
+  await t.app.onClientUpdate(cb(700, "rg:pok"));
   assert.ok(t.client.last(700).reply_markup.keyboard[0][0].request_location);
   await t.app.onClientUpdate(msg(700, { location: { latitude: 41.31, longitude: 69.28 } }));
+  // manzil avtomatik: uy, ko'cha, mahalla — tasdiqlanmaguncha saqlanmaydi
+  assert.match(t.client.last(700).text, /Navro'z mahallasi, Amir Temur ko'chasi, 12-uy/);
+  assert.equal(t.sql("SELECT coalesce(last_lat::text,'-') FROM users WHERE tg_id=700"), "-");
+  await t.app.onClientUpdate(cb(700, "rg:aadd"));
+  await t.app.onClientUpdate(msg(700, { text: "45-xonadon, 2-podyezd" }));
+  assert.match(t.client.last(700).text, /12-uy, 45-xonadon, 2-podyezd/);
+  await t.app.onClientUpdate(cb(700, "rg:aok"));
   assert.equal(t.sql("SELECT full_name||','||phone||','||last_lat FROM users WHERE tg_id=700"), "Aziz Karimov,+998901234567,41.31");
+  assert.equal(t.sql("SELECT last_address FROM users WHERE tg_id=700"), "Toshkent, Navro'z mahallasi, Amir Temur ko'chasi, 12-uy, 45-xonadon, 2-podyezd");
   assert.ok(t.client.texts(700).some((x) => x.includes("Ro'yxatdan o'tdingiz")));
   const menuMsg = t.client.msgs(700).at(-2);
   assert.equal(menuMsg.reply_markup.keyboard[0][0].web_app, undefined);        // klaviatura tugmasida web_app YO'Q
@@ -704,4 +718,25 @@ test("rahbar xodimga yangi login va parol beradi — eskisi ishlamaydi, xodim qa
   await admin(t, { action: "a_staff_create", full_name: "Vali", login: "vali", password: "maxfiy123", role: "courier" });
   assert.match((await admin(t, { action: "a_staff_update", id, op: "creds", login: "vali", password: "yangi12345" })).error, /band/);
   assert.ok(created.ok || created.id);
+});
+
+test("ro'yxat: boshqa raqam kiritish va manzilni o'zi yozish; manzil formati", async () => {
+  const t = setup();
+  await t.app.onClientUpdate(msg(710, { text: "/start" }));
+  await t.app.onClientUpdate(msg(710, { text: "Vali Aliyev" }));
+  await t.app.onClientUpdate(msg(710, { contact: { user_id: 710, phone_number: "998901111111" } }));
+  await t.app.onClientUpdate(cb(710, "rg:poth"));
+  assert.match(t.client.last(710).text, /raqamni yozing/);
+  await t.app.onClientUpdate(msg(710, { text: "12345" }));
+  assert.match(t.client.last(710).text, /noto'g'ri/);
+  await t.app.onClientUpdate(msg(710, { text: "93 555 44 33" }));
+  assert.equal(t.sql("SELECT phone FROM users WHERE tg_id=710"), "+998935554433");
+  await t.app.onClientUpdate(msg(710, { location: { latitude: 41.3, longitude: 69.2 } }));
+  await t.app.onClientUpdate(cb(710, "rg:anew"));
+  await t.app.onClientUpdate(msg(710, { text: "Chilonzor 9-kvartal, 14-uy" }));
+  await t.app.onClientUpdate(cb(710, "rg:aok"));
+  assert.equal(t.sql("SELECT last_address FROM users WHERE tg_id=710"), "Chilonzor 9-kvartal, 14-uy");
+  assert.ok(t.client.texts(710).some((x) => x.includes("Ro'yxatdan o'tdingiz")));
+  assert.equal(formatAddress({ house_number: "7", road: "Ipak Yo'li ko'chasi", neighbourhood: "Navro'z MFY", city: "Shahrisabz" }),
+    "Shahrisabz, Navro'z MFY, Ipak Yo'li ko'chasi, 7-uy");
 });

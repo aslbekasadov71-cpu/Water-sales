@@ -20,6 +20,21 @@ const normPhone = (raw) => {
   const d = String(raw || "").replace(/\D/g, "");
   return d ? "+" + d : "";
 };
+const UZ_PHONE = /^\+998\d{9}$/;
+const phoneFromText = (raw) => {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 9) d = "998" + d;
+  return d ? "+" + d : "";
+};
+// Nominatim javobidan o'qiladigan manzil: viloyat/shahar, mahalla, ko'cha, uy
+export function formatAddress(a) {
+  if (!a) return "";
+  const city = a.city || a.town || a.village || a.hamlet || a.county || "";
+  const mahalla = a.neighbourhood || a.quarter || a.suburb || a.residential || a.city_district || "";
+  const street = a.road || a.pedestrian || a.footway || "";
+  const house = a.house_number ? `${a.house_number}-uy` : "";
+  return [city, mahalla && mahalla !== city ? mahalla : "", street, house].filter(Boolean).join(", ");
+}
 const fmtTime = (iso, tz = "Asia/Tashkent") => {
   if (!iso) return "—";
   try {
@@ -111,7 +126,13 @@ export function createApp(deps) {
   const appLink = (page = "", hash = "") => `${webappUrl}/${page}?api=${encodeURIComponent(apiUrl || "")}${hash ? "#" + hash : ""}`;
   const inline = (rows) => ({ inline_keyboard: rows });
   const reply = (rows) => ({ keyboard: rows, resize_keyboard: true, is_persistent: true });
-  const contactKb = { keyboard: [[{ text: B.phone, request_contact: true }]], resize_keyboard: true, one_time_keyboard: true };
+  const contactKb = { keyboard: [[{ text: B.phone, request_contact: true }]], resize_keyboard: true, is_persistent: true,
+                      input_field_placeholder: "Pastdagi tugmani bosing 👇" };
+  const locationKb = { keyboard: [[{ text: B.location, request_location: true }]], resize_keyboard: true, is_persistent: true,
+                       input_field_placeholder: "Pastdagi tugmani bosing 👇" };
+  async function geocode(lat, lon) {
+    try { return deps.geocode ? (await deps.geocode(lat, lon)) || "" : ""; } catch (e) { console.warn("geocode", e?.message); return ""; }
+  }
 
   const mk = (tg) => ({
     send: (chat_id, text, extra = {}) =>
@@ -293,38 +314,62 @@ export function createApp(deps) {
     }
     if (!user.phone) {
       await clientSession(uid, { flow: "reg", step: "phone" });
-      return C.send(uid, "<b>2/3.</b> Telefon raqamingizni yuboring — dostavchi siz bilan shu raqam orqali bog'lanadi 👇",
-        { reply_markup: contactKb });
+      return C.send(uid, "<b>2/3.</b> Telefon raqamingiz 📱\n\nPastdagi <b>«📱 Raqamni yuborish»</b> tugmasini bosing.\n" +
+        "<i>Tugma ko'rinmasa, yozish qatori yonidagi ⌨️/⊞ belgisini bosing.</i>", { reply_markup: contactKb });
     }
     if (user.last_lat == null) {
       await clientSession(uid, { flow: "reg", step: "location" });
-      return C.send(uid, "<b>3/3.</b> Suv yetkaziladigan manzilni yuboring. Uyda bo'lsangiz, pastdagi tugmani bosing 👇\n" +
-        "<i>Boshqa joyda bo'lsangiz: 📎 → Joylashuv → xaritada uyingizni belgilang.</i>",
-        { reply_markup: { keyboard: [[{ text: B.location, request_location: true }]], resize_keyboard: true, one_time_keyboard: true } });
+      return C.send(uid, "<b>3/3.</b> Manzilingiz 📍\n\nUyda bo'lsangiz, pastdagi <b>«📍 Joylashuvni yuborish»</b> tugmasini bosing — " +
+        "uy, ko'cha va mahalla o'zi aniqlanadi.\n<i>Boshqa joyda bo'lsangiz: 📎 → Joylashuv → xaritada uyingizni belgilang.</i>",
+        { reply_markup: locationKb });
     }
     await clientSession(uid, null);
     await C.send(uid, `✅ Ro'yxatdan o'tdingiz, ${esc(user.full_name)}!`);
     return welcomeClient(uid, user.full_name);
   }
 
+  const phoneAskKb = inline([[{ text: "✅ Ha, shu raqam", callback_data: "rg:pok" }], [{ text: "✏️ Boshqa raqam kiritaman", callback_data: "rg:poth" }]]);
+  const addrKb = inline([[{ text: "✅ Ha, to'g'ri", callback_data: "rg:aok" }],
+                         [{ text: "✏️ Xonadon, podyezd, mo'ljal qo'shish", callback_data: "rg:aadd" }],
+                         [{ text: "📝 Manzilni o'zim yozaman", callback_data: "rg:anew" }]]);
+
+  async function savePhone(uid, user, from, phone) {
+    await rpc("client_register", { tg_id: uid, phone });
+    user.phone = phone;
+    await C.send(uid, `✅ Raqam saqlandi: <b>${esc(phone)}</b>`);
+    return askNextRegStep(uid, user, from);
+  }
+  async function showAddress(uid, sess) {
+    await clientSession(uid, { ...sess, flow: "reg", step: "address" });
+    if (!sess.addr) {
+      await clientSession(uid, { ...sess, flow: "reg", step: "address_new" });
+      return C.send(uid, "📍 Joylashuv qabul qilindi.\n\nUy manzilingizni yozing: <i>mahalla, ko'cha, uy, xonadon, mo'ljal</i>",
+        { reply_markup: { remove_keyboard: true } });
+    }
+    await C.send(uid, "📍 Joylashuv qabul qilindi.", { reply_markup: { remove_keyboard: true } });
+    return C.send(uid, `🏠 <b>Uy manzilingiz:</b>\n${esc(sess.addr)}\n\nShu manzilga olib boramizmi?`, { reply_markup: addrKb });
+  }
+
   async function onRegister(msg, from, user) {
     const uid = from.id;
     const text = (msg.text || "").trim();
-    if (msg.contact) {
-      if (msg.contact.user_id !== from.id) {
+    const sess = (await rpc("get_session", { tg_id: -uid }))?.data || {};
+    if (msg.contact && user.name_locked && !user.phone) {
+      if (msg.contact.user_id && msg.contact.user_id !== from.id) {
         return C.send(uid, `Iltimos, «${B.phone}» tugmasi orqali o'zingizning raqamingizni yuboring.`, { reply_markup: contactKb });
       }
       const phone = normPhone(msg.contact.phone_number);
-      await rpc("client_register", { tg_id: uid, phone });
-      user.phone = phone;
-    } else if (msg.location && user.name_locked && user.phone) {
+      await clientSession(uid, { flow: "reg", step: "phone_ask", phone });
+      await C.send(uid, "📱 Raqam qabul qilindi.", { reply_markup: { remove_keyboard: true } });
+      return C.send(uid, `Bog'lanishimiz uchun shu raqam bo'ladimi?\n<b>${esc(phone)}</b>\n\nYoki boshqa raqam kiritasizmi?`, { reply_markup: phoneAskKb });
+    }
+    if (msg.location && user.name_locked && user.phone) {
       const { latitude: lat, longitude: lon } = msg.location;
-      await rpc("client_register", { tg_id: uid, lat, lon });
-      user.last_lat = lat;
-      user.last_lon = lon;
-    } else if (text && !text.startsWith("/") && !user.name_locked) {
-      const sess = (await rpc("get_session", { tg_id: -uid }))?.data;
-      if (sess?.step === "name") {
+      const addr = await geocode(lat, lon);
+      return showAddress(uid, { lat, lon, addr });
+    }
+    if (text && !text.startsWith("/")) {
+      if (!user.name_locked && sess.step === "name") {
         const name = text.replace(/\s+/g, " ");
         if (!NAME_RE.test(name) || name.length > 60) {
           return C.send(uid, "Iltimos, ism va familiyangizni to'liq, harflar bilan yozing (masalan: <i>Aziz Karimov</i>):");
@@ -333,7 +378,46 @@ export function createApp(deps) {
         if (r.error) return C.send(uid, "⚠️ " + esc(r.error));
         user.full_name = r.name;
         user.name_locked = true;
+      } else if (user.name_locked && !user.phone && ["phone", "phone_other", "phone_ask"].includes(sess.step)) {
+        const phone = phoneFromText(text);
+        if (!UZ_PHONE.test(phone)) {
+          return C.send(uid, "Raqam noto'g'ri. Masalan: <b>+998 90 123 45 67</b> yoki <b>90 123 45 67</b>", sess.step === "phone" ? { reply_markup: contactKb } : {});
+        }
+        return savePhone(uid, user, from, phone);
+      } else if (user.phone && user.last_lat == null && ["address_add", "address_new"].includes(sess.step) && sess.lat != null) {
+        if (text.length < 3) return C.send(uid, "Iltimos, biroz batafsilroq yozing.");
+        const addr = sess.step === "address_add" && sess.addr ? `${sess.addr}, ${text.slice(0, 120)}` : text.slice(0, 250);
+        return showAddress(uid, { lat: sess.lat, lon: sess.lon, addr });
       }
+    }
+    return askNextRegStep(uid, user, from);
+  }
+
+  async function onRegCallback(cb, from, user, arg) {
+    const uid = from.id;
+    const sess = (await rpc("get_session", { tg_id: -uid }))?.data || {};
+    await C.answer(cb.id);
+    const mid = cb.message?.message_id;
+    const done = async (t) => { try { if (mid) await C.edit(uid, mid, t, null); } catch {} };
+    if (arg === "pok" && sess.step === "phone_ask" && sess.phone && !user.phone) {
+      await done(`📱 Bog'lanish raqami: <b>${esc(sess.phone)}</b>`);
+      return savePhone(uid, user, from, sess.phone);
+    }
+    if (arg === "poth" && sess.step === "phone_ask" && !user.phone) {
+      await clientSession(uid, { flow: "reg", step: "phone_other" });
+      await done("✏️ Boshqa raqam kiritasiz.");
+      return C.send(uid, "Bog'lanish uchun raqamni yozing.\nMasalan: <b>+998 90 123 45 67</b>");
+    }
+    if (arg === "aok" && sess.step === "address" && sess.lat != null && user.phone && user.last_lat == null) {
+      await rpc("client_register", { tg_id: uid, lat: sess.lat, lon: sess.lon, address: sess.addr || "" });
+      user.last_lat = sess.lat; user.last_lon = sess.lon;
+      await done(`🏠 Manzil: <b>${esc(sess.addr || "")}</b>`);
+      return askNextRegStep(uid, user, from);
+    }
+    if ((arg === "aadd" || arg === "anew") && sess.step === "address" && sess.lat != null) {
+      await clientSession(uid, { ...sess, step: arg === "aadd" ? "address_add" : "address_new" });
+      return C.send(uid, arg === "aadd" ? "Qo'shimcha yozing: <i>xonadon raqami, podyezd, qavat yoki mo'ljal</i>\nMasalan: <i>45-xonadon, 2-podyezd, 3-qavat</i>"
+                                        : "Uy manzilingizni to'liq yozing: <i>mahalla, ko'cha, uy, xonadon, mo'ljal</i>");
     }
     return askNextRegStep(uid, user, from);
   }
@@ -387,7 +471,10 @@ export function createApp(deps) {
     const { msg, cb, from } = p;
     const user = await upsertFrom(from);
     if (user.is_blocked) return;
-    if (cb) return onClientCallback(cb, from);
+    if (cb) {
+      if (String(cb.data || "").startsWith("rg:")) return onRegCallback(cb, from, user, String(cb.data).slice(3));
+      return onClientCallback(cb, from);
+    }
     const text = (msg.text || "").trim();
 
     if (text === "/id") return C.send(from.id, `Sizning Telegram ID raqamingiz: <code>${from.id}</code>`);
@@ -1046,6 +1133,16 @@ function makeTg(token) {
 }
 
 function makeDeps(env, ctx) {
+  // OpenStreetMap Nominatim: koordinatadan uy, ko'cha, mahalla (bepul, kalitsiz; 1 so'rov/soniya chegarasi)
+  async function geocode(lat, lon) {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=uz`,
+        { headers: { "User-Agent": "ZamZamWaterBot/1.0 (telegram delivery bot)" }, signal: ctl.signal });
+      if (!res.ok) return "";
+      return formatAddress((await res.json())?.address);
+    } finally { clearTimeout(t); }
+  }
   const staffToken = env.STAFF_BOT_TOKEN || env.BOT_TOKEN;
   async function rpc(name, p) {
     const res = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/rpc/${name}`, {
@@ -1095,7 +1192,7 @@ function makeDeps(env, ctx) {
     return { uploadUrl: `${base}/storage/v1${rel.startsWith("/") ? rel : "/" + rel}`, publicUrl: `${base}/storage/v1/object/public/${bucket}/${name}` };
   }
   return {
-    env, rpc, sendDocument, uploadImage, signUpload,
+    env, rpc, sendDocument, uploadImage, signUpload, geocode,
     tg: makeTg(env.BOT_TOKEN),
     tgStaff: env.STAFF_BOT_TOKEN ? makeTg(env.STAFF_BOT_TOKEN) : null,
     background: (p) => (ctx?.waitUntil ? ctx.waitUntil(p) : p),
