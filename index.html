@@ -37,6 +37,24 @@
 .bnr .dots{position:absolute;top:10px;right:12px;display:flex;gap:5px;z-index:2}
 .bnr .dots i{width:6px;height:6px;border-radius:9px;background:rgba(255,255,255,.55);transition:width .3s,background .3s}
 .bnr .dots i.on{width:20px;background:#fff}
+/* Ichki (standart) animatsiyali bannerlar */
+.ab{position:absolute;inset:0;overflow:hidden;color:#fff;padding:20px 18px;display:flex;flex-direction:column;justify-content:flex-end}
+.ab.a1{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
+.ab.a2{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
+.ab.a3{background:linear-gradient(135deg,#60a5fa,#2b6cf6 60%,#1e40af)}
+.ab h3{font-size:22px;font-weight:800;line-height:1.15;max-width:62%;letter-spacing:-.02em;position:relative;z-index:1}
+.ab p{font-size:14px;font-weight:600;opacity:.9;margin-top:6px;max-width:60%;position:relative;z-index:1}
+.ab .tag{align-self:flex-start;background:#fff;color:var(--b);font-weight:800;font-size:13px;border-radius:99px;padding:6px 12px;margin-top:12px;position:relative;z-index:1;box-shadow:0 6px 16px rgba(15,45,120,.25)}
+.ab .big{position:absolute;right:6%;top:50%;transform:translateY(-50%);color:#fff;filter:drop-shadow(0 12px 24px rgba(10,30,90,.35))}
+.ab .big.fl{animation:abfl 3.4s ease-in-out infinite}
+.ab .big.dr{animation:abdr 3.6s ease-in-out infinite}
+.ab .bub{position:absolute;bottom:-20px;border-radius:50%;background:rgba(255,255,255,.22);animation:abub linear infinite}
+.ab .wv{position:absolute;left:50%;width:640px;height:640px;margin-left:-320px;bottom:-610px;border-radius:43%;background:rgba(255,255,255,.14);animation:wave 10s linear infinite}
+.ab .road{position:absolute;left:46%;right:0;top:68%;height:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 18px,transparent 18px 34px);animation:abroad .8s linear infinite}
+@keyframes abfl{50%{transform:translateY(calc(-50% - 10px)) rotate(-5deg)}}
+@keyframes abdr{0%{transform:translate(-14px,-50%)}50%{transform:translate(8px,calc(-50% - 3px))}100%{transform:translate(-14px,-50%)}}
+@keyframes abub{from{transform:translateY(0);opacity:0}15%{opacity:1}to{transform:translateY(-260px);opacity:0}}
+@keyframes abroad{to{background-position:-34px 0}}
 /* Buyurtma bosqichlari */
 .ost{display:flex;gap:6px;margin:4px 0 12px}
 .ost div{flex:1;font-size:11px;font-weight:700;color:var(--mute);text-align:center}
@@ -377,8 +395,7 @@ function renderCatalog() {
       ${s.support_phone ? `<a class="pill" href="tel:${esc(String(s.support_phone).replace(/\s/g, ""))}">${ic("phone-calling-bold", 16)}</a>` : ""}
     </div>
     ${liveHtml}
-    ${bannersHtml() || `<div class="hero"><div class="wave"></div><div class="wave w2"></div><span class="drop">${ic("waterdrops-bold-duotone", 64)}</span>
-      <h1>Salom${first ? ", " + esc(first) : ""}!</h1><small>Toza ichimlik suvi — eshigingizgacha. Kerakli mahsulotni tanlang.</small></div>`}
+    ${bannersHtml()}
     ${u.type === "wholesale" ? `<div class="banner blue">${ic("shop-2-bold", 20)} Siz uchun optom narxlar${u.business ? " · " + esc(u.business) : ""}</div>` : ""}
     ${Number(S.me.debt) > 0 ? `<div class="banner red">${ic("wallet-money-bold", 20)} Qarzingiz: ${money(S.me.debt)}</div>` : ""}
     ${s.prices_final ? "" : `<div class="banner">${ic("info-circle-bold", 20)} Narxlar hozircha taxminiy</div>`}
@@ -394,13 +411,28 @@ function renderCatalog() {
 }
 
 // ---------- Reklama banneri: video ovozsiz o'ynaydi, tugagach keyingisiga o'tadi; rasm 5 soniya turadi ----------
+// Rahbar yuklagan bannerlar + yetmasa ichki animatsiyali bannerlar (jami kamida 3 ta, aylanib turadi)
+function builtinBanners() {
+  const ps = S.me.products || [];
+  const p20 = ps.find((p) => Number(p.volume_l) === 20) || ps[0];
+  const fee = Number(S.me.settings?.delivery_fee) || 0;
+  const bubbles = [8, 22, 38, 55, 70, 86].map((l, i) => `<i class="bub" style="left:${l}%;width:${10 + (i % 3) * 8}px;height:${10 + (i % 3) * 8}px;animation-duration:${4 + (i % 4)}s;animation-delay:${i * 0.7}s"></i>`).join("");
+  return [
+    `<div class="ab a1">${bubbles}<div class="wv"></div><span class="big fl">${ic("waterdrops-bold-duotone", 92)}</span>
+      <h3>Toza ichimlik suvi</h3><p>Har kuni yangi, eshigingizgacha olib boramiz</p><span class="tag" onclick="document.querySelector('.grid')?.scrollIntoView({behavior:'smooth'})">Buyurtma berish</span></div>`,
+    `<div class="ab a2">${bubbles}<span class="big fl" style="animation-delay:.6s">${ic("bottle-bold-duotone", 96)}</span>
+      <h3>${p20 ? esc(p20.title) : "20 litr"}</h3><p>Oilangiz uchun eng qulay hajm</p>${p20 ? `<span class="tag">${money(p20.price)}</span>` : ""}</div>`,
+    `<div class="ab a3"><div class="road"></div><span class="big dr">${ic("delivery-bold-duotone", 96)}</span>
+      <h3>Tez yetkazib beramiz</h3><p>Eng yaqin dostavchi buyurtmangizni oladi</p><span class="tag">${fee ? "Yetkazish " + money(fee) : "Yetkazish bepul"}</span></div>`,
+  ];
+}
 function bannersHtml() {
-  const list = S.me.banners || [];
-  if (!list.length) return "";
-  return `<div class="bnr"><div class="trk" id="bnrtrk">${list.map((b, i) => `<div class="sl">${b.kind === "video"
-      ? `<video src="${esc(b.url)}" muted playsinline webkit-playsinline preload="${i === 0 ? "auto" : "metadata"}" ${list.length === 1 ? "loop" : ""} disablepictureinpicture></video>`
-      : `<img src="${esc(b.url)}" alt="" ${i ? 'loading="lazy"' : ""}>`}${b.title ? `<div class="cap">${esc(b.title)}</div>` : ""}</div>`).join("")}</div>
-    ${list.length > 1 ? `<div class="dots" id="bnrdots">${list.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>`;
+  const list = (S.me.banners || []).map((b, i) => `<div class="sl">${b.kind === "video"
+      ? `<video src="${esc(b.url)}" muted playsinline webkit-playsinline preload="${i === 0 ? "auto" : "metadata"}" disablepictureinpicture></video>`
+      : `<img src="${esc(b.url)}" alt="" ${i ? 'loading="lazy"' : ""}>`}${b.title ? `<div class="cap">${esc(b.title)}</div>` : ""}</div>`);
+  const all = list.concat(builtinBanners().slice(0, Math.max(0, 3 - list.length)).map((h) => `<div class="sl">${h}</div>`));
+  return `<div class="bnr"><div class="trk" id="bnrtrk">${all.join("")}</div>
+    <div class="dots" id="bnrdots">${all.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div></div>`;
 }
 function initBanners() {
   const trk = $("bnrtrk");
@@ -422,7 +454,7 @@ function initBanners() {
     if (v) {
       v.onended = () => show(idx + 1, true);
       S.bnrTimer = setTimeout(() => show(idx + 1, true), 45000);   // juda uzun video bo'lsa ham aylanib turadi
-    } else S.bnrTimer = setTimeout(() => show(idx + 1, true), 5000);
+    } else S.bnrTimer = setTimeout(() => show(idx + 1, true), 4500);
   };
   let st;
   trk.addEventListener("scroll", () => {

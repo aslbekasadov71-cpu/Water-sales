@@ -683,7 +683,7 @@ async function renderBanners() {
   $("app").innerHTML = head("Reklama", "Mijoz ilovasi tepasida aylanadi", back()) +
     `<label class="btn b" style="margin-bottom:8px">${ic("upload-bold", 20)} Video yoki rasm yuklash<input type="file" accept="video/mp4,video/webm,video/quicktime,image/jpeg,image/png,image/webp" style="display:none" onchange="uploadBanner(this)"></label>
      <div id="upst"></div>
-     <div class="card pad small mute" style="margin-bottom:12px">Video: MP4, 15–30 soniya, 50 MB gacha, gorizontal (16:9). Ovozsiz ko'rsatiladi. Rasm: JPG/PNG, 16:9. Bir nechta banner bo'lsa birin-ketin almashadi. Ko'pi bilan 10 ta.</div>
+     <div class="card pad small mute" style="margin-bottom:12px">Video: MP4, 15–30 soniya, 50 MB gacha, gorizontal (16:9). Ovozsiz ko'rsatiladi. Rasm: JPG/PNG, 16:9. Bannerlar 4–5 soniyada aylanib turadi. 3 tadan kam yuklasangiz, qolgani tayyor animatsiyali bannerlar bilan to'ldiriladi (suv, 20 L narxi, yetkazish). Ko'pi bilan 10 ta.</div>
      <div id="blist"><div class="skel" style="height:200px"></div></div>`;
   const r = await run(() => call("a_banners"));
   if (!r || S.tab !== "banners") return;
