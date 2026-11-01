@@ -1,0 +1,11 @@
+# Ixtiyoriy: Cloudflare'ga buyruq qatoridan joylash uchun (npx wrangler deploy).
+# Maxfiy qiymatlar bu yerga YOZILMAYDI: npx wrangler secret put BOT_TOKEN va h.k.
+name = "zamzam-bot"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+WEBAPP_URL = "https://zamzam-water.onrender.com"
+
+[triggers]
+crons = ["* * * * *"]

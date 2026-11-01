@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>ZamZam suv</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{--surface:#fff;--bg:#eef4ff;--card:#fff;--ink:#13254a;--ink2:#344054;--mute:#8a94a6;--line:#dfe8fa;--b:#2b6cf6;--bd:#1a4fd1;--bl:#e8f0ff;--red:#f04438;--redl:#fee4e2;--ok:#12b76a;--okl:#dcfae6;--warn:#8a5a00;--warnl:#fff3d6;--sh:0 6px 24px rgba(16,24,40,.08)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+.skrow{height:20px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--line),var(--card));background-size:200% 100%;animation:skm 1.2s infinite;margin-bottom:12px}
+@keyframes skm{to{background-position:-200% 0}}
+.prof{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:22px;padding:16px;margin-bottom:12px}
+.prof .av{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#4f8bff,#1d4ed8);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
+.tiles3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.tile{background:var(--card);border-radius:18px;padding:12px;text-align:center}
+.tile b{display:block;font-size:20px;font-weight:800}
+.tile small{font-size:12px}
+.mrow{display:flex;align-items:center;gap:12px;background:var(--card);padding:14px;border-radius:16px;margin-bottom:8px;cursor:pointer;color:inherit;text-decoration:none}
+.mrow .grow{flex:1;min-width:0}.mrow b{display:block}
+.mrow .mi{width:38px;height:38px;border-radius:12px;background:var(--bl);color:var(--b);display:grid;place-items:center;flex:none}
+.pdimg{aspect-ratio:4/3;border-radius:20px;overflow:hidden;margin-bottom:14px;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#f4f8ff,#dfe9ff 70%);color:var(--b)}
+.pdimg img{width:100%;height:100%;object-fit:cover}
+.cfm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+/* Reklama banneri (video / rasm karuseli) */
+.bnr{position:relative;border-radius:24px;overflow:hidden;margin-bottom:14px;aspect-ratio:16/9;background:linear-gradient(135deg,#dbe7ff,#bcd3ff);animation:rise .5s both;box-shadow:var(--sh)}
+.bnr .trk{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.bnr .trk::-webkit-scrollbar{display:none}
+.bnr .sl{flex:0 0 100%;height:100%;scroll-snap-align:center;position:relative}
+.bnr video,.bnr img{width:100%;height:100%;object-fit:cover;display:block;background:linear-gradient(135deg,#dbe7ff,#bcd3ff)}
+.bnr .cap{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;background:linear-gradient(transparent,rgba(15,45,120,.7));color:#fff;font-weight:800;font-size:16px;pointer-events:none}
+.bnr .dots{position:absolute;top:10px;right:12px;display:flex;gap:5px;z-index:2}
+.bnr .dots i{width:6px;height:6px;border-radius:9px;background:rgba(255,255,255,.55);transition:width .3s,background .3s}
+.bnr .dots i.on{width:20px;background:#fff}
+/* Buyurtma bosqichlari */
+.ost{display:flex;gap:6px;margin:4px 0 12px}
+.ost div{flex:1;font-size:11px;font-weight:700;color:var(--mute);text-align:center}
+.ost i{display:block;height:5px;border-radius:9px;background:var(--line);margin-bottom:5px;position:relative;overflow:hidden}
+.ost div.on{color:var(--ink)}.ost div.on i{background:var(--b)}
+.ost div.cur i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:shine 1.4s linear infinite}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.crow{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:14px;padding:10px 12px;margin-top:8px}
+.crow .grow{flex:1;min-width:0}.crow b{display:block}
+html,body{min-height:100%;background:var(--bg)}
+body{font:500 16px/1.4 Manrope,-apple-system,system-ui,sans-serif;color:var(--ink);padding-top:env(safe-area-inset-top);overscroll-behavior-y:none}
+#app{max-width:560px;margin:0 auto;padding:10px 14px calc(150px + env(safe-area-inset-bottom))}
+iconify-icon{display:inline-block;vertical-align:middle;flex:none}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+h2{font-size:15px;font-weight:800;margin:22px 2px 10px;display:flex;justify-content:space-between;align-items:center}
+small{display:block;font-size:13px;color:var(--mute);font-weight:500}
+button{font-family:inherit}
+.top{display:flex;justify-content:space-between;align-items:center;margin:6px 0 14px;gap:10px}
+.pill{background:var(--bl);color:var(--b);font-weight:700;font-size:13px;padding:8px 12px;border-radius:99px;display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;text-decoration:none;white-space:nowrap}
+.addr-chip{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:99px;padding:8px 12px 8px 10px;font-weight:700;font-size:14px;min-width:0;border:0;cursor:pointer;box-shadow:var(--sh);color:var(--ink)}
+.addr-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52vw}
+input,textarea{font:inherit;color:inherit;width:100%;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:10px;outline:0;resize:none}
+input:focus,textarea:focus{border-color:var(--b)}
+.btn{font-weight:700;font-size:16px;border-radius:16px;padding:15px 16px;background:var(--card);color:var(--ink);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:transform .12s}
+.btn:active{transform:scale(.97)}
+.btn.b{background:var(--b);color:#fff;border-color:var(--b)}
+.btn.b:disabled{opacity:.5}
+.btn.red{background:var(--redl);color:var(--red);border-color:var(--redl)}
+.btn.full{width:100%}.btn.sm{padding:9px 12px;font-size:14px;border-radius:12px}
+.card{background:var(--card);border-radius:18px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.card>.grow{flex:1;min-width:0}
+.card b{display:block}
+.tag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--bl);color:var(--b);display:inline-block;white-space:nowrap}
+.tag.ok{background:var(--okl);color:#067647}.tag.red{background:var(--redl);color:var(--red)}.tag.warn{background:var(--warnl);color:var(--warn)}.tag.grey{background:var(--bg);color:var(--mute)}
+.banner{display:flex;gap:10px;align-items:center;border-radius:14px;padding:10px 14px;margin:0 0 12px;font-weight:700;font-size:14px;background:var(--warnl);color:var(--warn)}
+.banner.blue{background:var(--bl);color:var(--b)}.banner.red{background:var(--redl);color:var(--red)}
+.seg{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:10px}
+.seg button{flex:1;font-size:14px;font-weight:700;border:0;background:none;color:var(--mute);padding:10px 4px;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
+.seg button.on{background:var(--b);color:#fff}
+.seg button:disabled{opacity:.6;cursor:default}
+.seg button em{font-style:normal;font-size:11px;font-weight:700}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.empty iconify-icon{color:var(--b);opacity:.7;margin-bottom:8px}
+.ord{background:var(--card);border-radius:18px;padding:14px;margin-bottom:10px}
+.ord .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.line{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:15px}
+.line.tot{border-top:1px solid var(--line);margin-top:6px;padding-top:10px;font-weight:800}
+.note{font-size:13px;background:var(--warnl);color:var(--warn);border-radius:10px;padding:6px 10px;margin-top:6px;font-weight:700}
+.spin{display:grid;place-items:center;padding:30vh 0;color:var(--b)}
+.stat{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;border-radius:22px;padding:18px;margin-bottom:10px}
+.stat small{color:rgba(255,255,255,.8)}
+.stat .big{font-size:30px;font-weight:800;margin-top:4px}
+
+/* ---------- Pastki menyu ---------- */
+nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav button{flex:1;background:none;border:0;color:var(--mute);font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer;position:relative}
+nav button.on{color:var(--b)}
+nav i{position:absolute;top:2px;left:55%;background:var(--red);color:#fff;font-style:normal;font-size:10px;border-radius:99px;padding:0 5px;line-height:16px}
+
+/* ---------- Katalog ---------- */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:18px;color:#fff;background:linear-gradient(135deg,#3b82f6 0%,#2b6cf6 45%,#1a4fd1 100%);margin-bottom:14px;min-height:118px;animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.hero h1{font-size:22px;max-width:70%}
+.hero small{color:rgba(255,255,255,.85);margin-top:6px;max-width:68%}
+.hero .drop{position:absolute;right:14px;top:16px;color:#fff;opacity:.95;animation:float 3.2s ease-in-out infinite}
+.hero .wave{position:absolute;left:50%;width:520px;height:520px;margin-left:-260px;bottom:-492px;background:rgba(255,255,255,.16);border-radius:43%;animation:wave 9s linear infinite}
+.hero .wave.w2{bottom:-500px;background:rgba(255,255,255,.1);border-radius:40%;animation-duration:14s}
+@keyframes float{50%{transform:translateY(-8px) rotate(-4deg)}}
+@keyframes wave{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc{background:var(--card);border-radius:22px;padding:8px 8px 10px;display:flex;flex-direction:column;animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 70ms);position:relative}
+.pimg{aspect-ratio:1/1;border-radius:16px;overflow:hidden;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,#f4f8ff,#dfe9ff 70%)}
+.pimg img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.pc:active .pimg img{transform:scale(1.04)}
+.pimg .vol{position:absolute;left:8px;top:8px;background:rgba(255,255,255,.92);color:var(--b);font-size:12px;font-weight:800;padding:3px 8px;border-radius:99px}
+.pimg .ph{color:var(--b);filter:drop-shadow(0 8px 12px rgba(43,108,246,.25));animation:float 4s ease-in-out infinite;animation-delay:calc(var(--i) * -0.7s)}
+.pc .pt{font-weight:700;font-size:15px;margin:8px 4px 0;line-height:1.25;min-height:38px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc .pd{font-size:12px;color:var(--mute);margin:2px 4px 0;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.pc .pr{display:flex;align-items:center;justify-content:space-between;margin:8px 2px 0 4px;gap:6px;min-height:40px}
+.pc .price{font-weight:800;font-size:15px;line-height:1.1;white-space:nowrap}
+.pc .old{text-decoration:line-through;color:var(--mute);font-size:12px;font-weight:600;display:block}
+.plus{background:var(--b);color:#fff;border:0;border-radius:14px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:none;transition:transform .15s}
+.plus:active{transform:scale(.88)}
+.stp{display:flex;align-items:center;background:var(--b);color:#fff;border-radius:14px;height:40px;flex:none;animation:pop .22s ease-out}
+.stp button{background:none;border:0;color:#fff;width:30px;height:40px;display:grid;place-items:center;cursor:pointer}
+.stp b{min-width:18px;text-align:center;font-size:15px}
+@keyframes pop{from{transform:scale(.7);opacity:.3}}
+.bump{animation:bump .3s ease-out}
+@keyframes bump{40%{transform:scale(1.15)}}
+.livecard{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 10px 24px rgba(43,108,246,.3);color:#fff;border-radius:20px;padding:12px 14px;margin-bottom:14px;cursor:pointer;animation:rise .4s both}
+.livecard small{color:rgba(255,255,255,.7)}
+.livecard .car{width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:none}
+.livecard .eta{margin-left:auto;background:#fff;color:var(--b);font-weight:800;border-radius:12px;padding:6px 10px;font-size:14px;white-space:nowrap}
+
+/* Savatcha paneli */
+.cartbar{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;background:var(--b);color:#fff;border-radius:20px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;z-index:6;box-shadow:0 12px 30px rgba(43,108,246,.35);transform:translateY(calc(100% + 120px));visibility:hidden;transition:transform .35s cubic-bezier(.2,.9,.25,1.1),visibility .35s;cursor:pointer;border:0;font:inherit;text-align:left}
+.cartbar.show{transform:none;visibility:visible}
+.cartbar .cnt{width:34px;height:34px;border-radius:12px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-weight:800;flex:none}
+.cartbar .grow{flex:1}
+.cartbar small{color:rgba(255,255,255,.8)}
+.cartbar b{font-size:18px;font-weight:800}
+.cartbar .go{background:#fff;color:var(--b);border-radius:14px;padding:10px 14px;font-weight:800;display:flex;align-items:center;gap:6px}
+.flyer{position:fixed;width:18px;height:18px;border-radius:50%;background:var(--b);z-index:30;pointer-events:none;transition:transform .55s cubic-bezier(.5,-0.3,.7,1),opacity .55s}
+
+/* ---------- Rasmiylashtirish (xarita markazida pin) ---------- */
+.pick{position:relative;height:min(56vh,440px);border-radius:22px;overflow:hidden;margin-bottom:10px;background:#e5e9f0}
+.pick #map{position:absolute;inset:0;z-index:0}
+.pin{position:absolute;left:50%;top:50%;z-index:500;pointer-events:none;transform:translate(-50%,-100%);transition:transform .2s}
+.pin.up{transform:translate(-50%,-125%)}
+.pin .head{width:44px;height:44px;border-radius:50%;background:var(--b);display:grid;place-items:center;color:#fff;box-shadow:0 8px 18px rgba(43,108,246,.4)}
+.pin .leg{width:4px;height:14px;background:var(--b);margin:0 auto;border-radius:0 0 2px 2px}
+.pinshadow{position:absolute;left:50%;top:50%;width:14px;height:6px;margin:-3px 0 0 -7px;border-radius:50%;background:rgba(16,24,40,.35);z-index:499;pointer-events:none}
+.mapfab{position:absolute;right:10px;bottom:10px;z-index:600;width:46px;height:46px;border-radius:50%;background:#fff;border:0;display:grid;place-items:center;color:var(--ink);box-shadow:var(--sh);cursor:pointer}
+.geo{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:600;background:rgba(255,255,255,.96);border-radius:16px;padding:8px 14px;text-align:center;box-shadow:var(--sh);max-width:86%;pointer-events:none}
+.geo small{font-size:12px}
+.geo b{display:block;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pin .head{border-radius:14px!important;background:var(--b)!important;box-shadow:0 8px 18px rgba(43,108,246,.4)!important}
+.pin .leg{background:var(--b)!important}
+
+/* ---------- Kuzatish (Yandex Go uslubidagi to'liq ekran) ---------- */
+#trk{position:fixed;inset:0;z-index:8;background:#e5e9f0}
+#tmap{position:absolute;inset:0}
+.tback{position:absolute;left:14px;top:calc(env(safe-area-inset-top) + 14px);z-index:600;width:46px;height:46px;border-radius:50%;background:#fff;border:0;display:grid;place-items:center;box-shadow:var(--sh);cursor:pointer;color:var(--ink)}
+.tfit{position:absolute;right:14px;z-index:600;width:46px;height:46px;border-radius:50%;background:#fff;border:0;display:grid;place-items:center;box-shadow:var(--sh);cursor:pointer;color:var(--ink);transition:bottom .3s}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:700;background:#fff;border-radius:26px 26px 0 0;padding:8px 16px calc(16px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;box-shadow:0 -10px 30px rgba(16,24,40,.12);max-height:62vh;overflow-y:auto;animation:sheetup .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes sheetup{from{transform:translateY(100%)}}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sh-top h1{font-size:23px}
+.etabox{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border-radius:16px;padding:8px 12px;text-align:center;flex:none;min-width:72px}
+.etabox b{display:block;font-size:22px;font-weight:800;line-height:1}
+.etabox small{color:rgba(255,255,255,.7);font-size:11px;margin-top:2px}
+.prog{display:flex;gap:6px;margin:14px 0 4px}
+.prog span{flex:1;height:5px;border-radius:9px;background:var(--line);overflow:hidden;position:relative}
+.prog span.on{background:var(--b)}
+.prog span.cur::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);animation:shine 1.4s linear infinite}
+.prog span.cur{background:var(--b)}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.steps{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);font-weight:700;margin-bottom:12px}
+.steps .on{color:var(--ink)}
+.courier{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--bg);margin:6px 0 10px}
+.ava{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1a4fd1);color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px;flex:none;position:relative}
+.ava i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:#fff;color:var(--b);display:grid;place-items:center;font-style:normal}
+.courier .grow{flex:1;min-width:0}
+.courier b{display:block;font-size:16px}
+.plate{display:inline-flex;align-items:center;gap:4px;margin-top:4px;border:1.5px solid var(--b);color:var(--b);border-radius:6px;padding:1px 6px;font-size:12px;font-weight:800;letter-spacing:.04em;background:#fff}
+.acts{display:flex;gap:8px;margin-bottom:12px}
+.act{flex:1;background:var(--bg);border:0;border-radius:16px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--ink);text-decoration:none;cursor:pointer}
+.act iconify-icon{color:var(--b)}
+.act.red iconify-icon{color:var(--red)}
+.dots::after{content:"";animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.searchbar{height:5px;border-radius:9px;background:var(--bl);overflow:hidden;margin:14px 0}
+.searchbar::after{content:"";display:block;height:100%;width:40%;background:var(--b);border-radius:9px;animation:slide 1.3s ease-in-out infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+.det summary{list-style:none;display:flex;justify-content:space-between;align-items:center;font-weight:800;padding:10px 2px;cursor:pointer}
+.det summary::-webkit-details-marker{display:none}
+.det[open] summary iconify-icon{transform:rotate(180deg)}
+.stale{font-size:12px;color:var(--warn);background:var(--warnl);border-radius:10px;padding:6px 10px;margin:6px 0;font-weight:700}
+/* Xarita belgilari */
+.carmk{width:44px;height:44px;display:grid;place-items:center}
+.carmk svg{filter:drop-shadow(0 3px 4px rgba(16,24,40,.35))}
+.homemk{display:flex;flex-direction:column;align-items:center}
+.homemk .h{width:40px;height:40px;border-radius:50%;background:var(--b);color:#fff;display:grid;place-items:center;box-shadow:0 6px 14px rgba(16,24,40,.3);border:3px solid #fff}
+.homemk .l{width:3px;height:8px;background:var(--b)}
+.radar{position:relative;width:200px;height:200px}
+.radar span{position:absolute;inset:0;border-radius:50%;background:rgba(43,108,246,.22);animation:radar 2.4s ease-out infinite;transform:scale(.1)}
+.radar span:nth-child(2){animation-delay:.8s}.radar span:nth-child(3){animation-delay:1.6s}
+@keyframes radar{to{transform:scale(1);opacity:0}}
+.maplibregl-map{font-family:inherit}
+.maplibregl-ctrl-attrib{font-size:10px}
+.okbig{width:84px;height:84px;border-radius:26px;background:var(--okl);color:var(--ok);display:grid;place-items:center;margin:4px auto 14px;animation:pop .4s ease-out}
+
+/* ---------- Modal, toast ---------- */
+.modal{position:fixed;inset:0;background:rgba(16,24,40,.5);display:flex;align-items:flex-end;z-index:9;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.modal>div{background:var(--bg);width:100%;max-width:560px;margin:0 auto;border-radius:26px 26px 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;animation:sheetup .3s cubic-bezier(.2,.8,.2,1)}
+#toast{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);background:var(--b);color:#fff;font-weight:700;padding:10px 16px;border-radius:99px;z-index:20;box-shadow:0 8px 20px rgba(43,108,246,.35);display:none;align-items:center;gap:6px;max-width:92%;text-align:center}
+.done{text-align:center;padding:12vh 10px 0}
+.done h1{margin-bottom:8px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"><div style="padding-top:18px"><div class="skrow" style="width:45%;height:38px;border-radius:99px"></div><div class="skrow" style="height:120px;border-radius:24px"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="skrow" style="height:230px;border-radius:22px"></div><div class="skrow" style="height:230px;border-radius:22px"></div></div></div></div>
+<button id="cartbar" class="cartbar" onclick="openCheckout()"></button>
+<nav id="nav" style="display:none"></nav>
+<div id="toast"></div>
+
+<script>
+const tgw = window.Telegram && window.Telegram.WebApp;
+const API = new URLSearchParams(location.search).get("api") || "https://zamzam-bot-kljv.onrender.com";
+const ic = (n, s = 22) => `<iconify-icon icon="solar:${n}" width="${s}" height="${s}"></iconify-icon>`;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n) => Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " so'm";
+const $ = (id) => document.getElementById(id);
+const haptic = (t = "light") => { try { tgw.HapticFeedback.impactOccurred(t); } catch {} };
+const DEFAULT_CENTER = [41.3111, 69.2797];
+// Xarita: OpenFreeMap (OpenStreetMap ma'lumotlari) — bepul, kalitsiz, tijoriy foydalanishga ruxsat bor
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/bright";
+function makeMap(container, lat, lon, zoom) {
+  const map = new maplibregl.Map({ container, style: MAP_STYLE, center: [lon, lat], zoom, attributionControl: false,
+    dragRotate: false, pitchWithRotate: false, touchPitch: false, maxZoom: 19 });
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
+  try { map.touchZoomRotate.disableRotation(); } catch {}
+  return map;
+}
+const mapOk = () => Boolean(window.maplibregl);
+const SPEED_KMH = 25;   // shahar ichida o'rtacha tezlik (taxminiy vaqt uchun)
+
+const S = { view: "catalog", me: null, cart: {}, loc: null, address: "", timeMode: "asap", timeText: "", idem: newIdem(),
+            map: null, sending: false, trk: null, poll: null };
+function newIdem() { return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/-/g, ""); }
+
+function toast(text, ms = 2600) {
+  const t = $("toast"); t.textContent = text; t.style.display = "flex";
+  clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = "none"), ms);
+}
+async function call(action, data = {}) {
+  const res = await fetch(API + "/api", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initData: tgw.initData, action, ...data }) });
+  let j = {};
+  try { j = await res.json(); } catch {}
+  if (!res.ok || j.error) throw new Error(j.error || "Internet bilan muammo. Qaytadan urinib ko'ring.");
+  return j;
+}
+function fatal(icon, title, text) {
+  $("nav").style.display = "none"; $("cartbar").classList.remove("show");
+  $("app").innerHTML = `<div class="done"><div class="okbig" style="background:var(--bl);color:var(--b)">${ic(icon, 44)}</div>
+    <h1>${title}</h1><small style="font-size:15px">${text}</small></div>`;
+}
+
+const STATUS = {
+  new: ["Qidirilmoqda", "warn"], offered: ["Qidirilmoqda", "warn"], unassigned: ["Qidirilmoqda", "warn"],
+  accepted: ["Yo'lda", ""], delivered: ["Yetkazildi", "ok"], cancelled: ["Bekor qilingan", "grey"],
+};
+const ACTIVE = ["new", "offered", "unassigned", "accepted"];
+const SEARCHING = ["new", "offered", "unassigned"];
+const fmtDate = (iso) => new Date(iso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+function dist(a, b, c, d) {
+  const r = (x) => (x * Math.PI) / 180;
+  const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+const fmtKm = (d) => (d < 1 ? Math.round(d * 1000) + " m" : d.toFixed(1) + " km");
+const etaMin = (d) => Math.max(1, Math.round((d / SPEED_KMH) * 60 + 1));
+function orderEta(o) {
+  if (o.status !== "accepted" || !o.courier_loc) return null;
+  const d = dist(o.courier_loc.lat, o.courier_loc.lon, o.lat, o.lon);
+  return { d, min: etaMin(d) };
+}
+
+// ------------------------------------------------------------------ Asosiy
+async function load() {
+  if (!tgw || !tgw.initData) return fatal("smartphone-2-bold-duotone", "Telegram orqali oching", "Bu sahifa ZamZam boti ichida ishlaydi.");
+  tgw.ready(); tgw.expand();
+  document.documentElement.dataset.theme = "light";
+  try { tgw.setHeaderColor("#eef4ff"); tgw.setBackgroundColor("#eef4ff"); tgw.setBottomBarColor?.("#ffffff"); } catch {}
+  try { tgw.BackButton.onClick(onBack); } catch {}
+  try { S.me = await call("me"); } catch (e) { return fatal("wifi-router-minimalistic-bold-duotone", "Ulanib bo'lmadi", esc(e.message)); }
+  if (!S.me.user.registered) return fatal("user-id-bold-duotone", "Ro'yxatdan o'ting", "Botga qaytib ism-familiya, telefon raqam va manzilingizni yuboring, so'ng shu oynani qayta oching.");
+  if (S.me.user.last_lat != null) S.loc = { lat: S.me.user.last_lat, lon: S.me.user.last_lon };
+  S.address = S.me.user.last_address || "";
+  const h = location.hash.replace("#", "");
+  const live = S.me.orders.find((o) => ACTIVE.includes(o.status));
+  if (h === "orders" && live) return openTrack(live.id);
+  if (["orders", "profile"].includes(h)) S.view = h;
+  render();
+}
+
+function onBack() {
+  if ($("modal")) return closeModal();
+  if (S.view === "checkout" || S.view === "track") { S.view = "catalog"; render(); }
+}
+
+function renderNav() {
+  const hide = ["checkout", "track", "done"].includes(S.view);
+  try { hide ? tgw.BackButton.show() : tgw.BackButton.hide(); } catch {}
+  if (hide) { $("nav").style.display = "none"; return; }
+  const active = S.me.orders.filter((o) => ACTIVE.includes(o.status)).length;
+  const tabs = [["catalog", "shop-2-bold-duotone", "Katalog"], ["orders", "box-bold-duotone", "Buyurtmalar"], ["profile", "settings-bold-duotone", "Sozlamalar"]];
+  $("nav").style.display = "flex";
+  $("nav").innerHTML = tabs.map(([k, i, t]) => `<button class="${S.view === k ? "on" : ""}" onclick="go('${k}')">${ic(i, 24)}${t}${k === "orders" && active ? `<i>${active}</i>` : ""}</button>`).join("");
+}
+function go(view) { S.view = view; haptic(); render(); window.scrollTo(0, 0); }
+
+function cleanup() {
+  clearInterval(S.poll); S.poll = null;
+  clearTimeout(S.bnrTimer); S.bnrTimer = null;
+  if (S.trk) { cancelAnimationFrame(S.trk.raf); try { S.trk.map.remove(); } catch {} S.trk = null; }
+  if (S.map) { try { S.map.remove(); } catch {} S.map = null; }
+  const t = $("trk"); if (t) t.remove();
+}
+function render() {
+  cleanup();
+  renderNav();
+  renderCartBar();
+  if (S.view === "catalog") return renderCatalog();
+  if (S.view === "checkout") return renderCheckout();
+  if (S.view === "orders") return renderOrders();
+  if (S.view === "profile") return renderProfile();
+}
+
+// ------------------------------------------------------------------ Katalog
+function cartTotal() {
+  let items = 0, n = 0;
+  for (const p of S.me.products) { const q = S.cart[p.id] || 0; items += q * p.price; n += q; }
+  return { items, n, fee: n ? Number(S.me.settings.delivery_fee) : 0 };
+}
+function prodImage(p, i) {
+  const vol = p.volume_l ? `<span class="vol">${p.volume_l} L</span>` : "";
+  if (p.image_url) return `<div class="pimg"><img src="${esc(p.image_url)}" alt="" loading="lazy" onerror="this.remove()">${vol}</div>`;
+  const icon = p.volume_l ? (p.volume_l >= 15 ? "bottle-bold-duotone" : "bottle-bold-duotone") : "box-bold-duotone";
+  const size = p.volume_l ? Math.min(96, 52 + p.volume_l * 2) : 64;
+  return `<div class="pimg"><span class="ph" style="--i:${i}">${ic(icon, size)}</span>${vol}</div>`;
+}
+function ctrl(p) {
+  const q = S.cart[p.id] || 0;
+  return q
+    ? `<div class="stp"><button onclick="setQty(${p.id},-1,event)" aria-label="Kamaytirish">${ic("minus-circle-linear", 20)}</button><b>${q}</b><button onclick="setQty(${p.id},1,event)" aria-label="Ko'paytirish">${ic("add-circle-linear", 20)}</button></div>`
+    : `<button class="plus" onclick="setQty(${p.id},1,event)" aria-label="Savatchaga">${ic("add-square-bold", 24)}</button>`;
+}
+function renderCatalog() {
+  const s = S.me.settings, u = S.me.user;
+  const first = (u.name || "").split(" ")[0];
+  const live = S.me.orders.find((o) => ACTIVE.includes(o.status));
+  let liveHtml = "";
+  if (live) {
+    const title = live.status === "accepted" ? "Buyurtmangiz yo'lda" : "Dostavchi qidirilmoqda";
+    liveHtml = `<div class="livecard" onclick="openTrack(${live.id})"><div class="car">${ic(live.status === "accepted" ? "delivery-bold-duotone" : "hourglass-bold-duotone", 26)}</div>
+      <div><b>${title}</b><small>Buyurtma #${live.id}${live.courier ? " · " + esc(live.courier.name) : ""} · kuzatish</small></div>
+      <div class="eta">${orderEta(live) ? "~" + orderEta(live).min + " daq" : ic("alt-arrow-right-linear", 18)}</div></div>`;
+  }
+  $("app").innerHTML = `
+    <div class="top">
+      <button class="addr-chip" onclick="openCheckout(true)">${ic("map-point-bold", 18)}<span>${esc(S.address || "Manzilni belgilang")}</span>${ic("alt-arrow-down-linear", 16)}</button>
+      ${s.support_phone ? `<a class="pill" href="tel:${esc(String(s.support_phone).replace(/\s/g, ""))}">${ic("phone-calling-bold", 16)}</a>` : ""}
+    </div>
+    ${liveHtml}
+    ${bannersHtml() || `<div class="hero"><div class="wave"></div><div class="wave w2"></div><span class="drop">${ic("waterdrops-bold-duotone", 64)}</span>
+      <h1>Salom${first ? ", " + esc(first) : ""}!</h1><small>Toza ichimlik suvi — eshigingizgacha. Kerakli mahsulotni tanlang.</small></div>`}
+    ${u.type === "wholesale" ? `<div class="banner blue">${ic("shop-2-bold", 20)} Siz uchun optom narxlar${u.business ? " · " + esc(u.business) : ""}</div>` : ""}
+    ${Number(S.me.debt) > 0 ? `<div class="banner red">${ic("wallet-money-bold", 20)} Qarzingiz: ${money(S.me.debt)}</div>` : ""}
+    ${s.prices_final ? "" : `<div class="banner">${ic("info-circle-bold", 20)} Narxlar hozircha taxminiy</div>`}
+    <h2>Katalog <small>${S.me.products.length} ta mahsulot</small></h2>
+    <div class="grid">${S.me.products.map((p, i) => `<div class="pc" style="--i:${i}" id="pc-${p.id}">
+        <div onclick="openProduct(${p.id})" style="cursor:pointer">${prodImage(p, i)}</div>
+        <div class="pt" onclick="openProduct(${p.id})" style="cursor:pointer">${esc(p.title)}</div>
+        ${p.description ? `<div class="pd">${esc(p.description)}</div>` : p.returnable ? `<div class="pd">Idish qaytariladi</div>` : ""}
+        <div class="pr"><div><span class="price">${money(p.price)}</span>${p.price < p.retail_price ? `<span class="old">${money(p.retail_price)}</span>` : ""}</div>
+          <span id="ctl-${p.id}">${ctrl(p)}</span></div></div>`).join("") || `<div class="empty">${ic("box-bold-duotone", 48)}<br>Mahsulotlar tez orada qo'shiladi</div>`}
+    </div>`;
+  initBanners();
+}
+
+// ---------- Reklama banneri: video ovozsiz o'ynaydi, tugagach keyingisiga o'tadi; rasm 5 soniya turadi ----------
+function bannersHtml() {
+  const list = S.me.banners || [];
+  if (!list.length) return "";
+  return `<div class="bnr"><div class="trk" id="bnrtrk">${list.map((b, i) => `<div class="sl">${b.kind === "video"
+      ? `<video src="${esc(b.url)}" muted playsinline webkit-playsinline preload="${i === 0 ? "auto" : "metadata"}" ${list.length === 1 ? "loop" : ""} disablepictureinpicture></video>`
+      : `<img src="${esc(b.url)}" alt="" ${i ? 'loading="lazy"' : ""}>`}${b.title ? `<div class="cap">${esc(b.title)}</div>` : ""}</div>`).join("")}</div>
+    ${list.length > 1 ? `<div class="dots" id="bnrdots">${list.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>`;
+}
+function initBanners() {
+  const trk = $("bnrtrk");
+  if (!trk) return;
+  const slides = [...trk.children];
+  let idx = 0;
+  const show = (i, scroll) => {
+    clearTimeout(S.bnrTimer);
+    idx = (i + slides.length) % slides.length;
+    if (scroll) trk.scrollTo({ left: idx * trk.clientWidth, behavior: "smooth" });
+    document.querySelectorAll("#bnrdots i").forEach((d, k) => d.classList.toggle("on", k === idx));
+    slides.forEach((sl, k) => {
+      const v = sl.querySelector("video");
+      if (!v) return;
+      if (k === idx) { v.muted = true; v.currentTime = 0; v.play().catch(() => {}); } else v.pause();
+    });
+    if (slides.length < 2) return;
+    const v = slides[idx].querySelector("video");
+    if (v) {
+      v.onended = () => show(idx + 1, true);
+      S.bnrTimer = setTimeout(() => show(idx + 1, true), 45000);   // juda uzun video bo'lsa ham aylanib turadi
+    } else S.bnrTimer = setTimeout(() => show(idx + 1, true), 5000);
+  };
+  let st;
+  trk.addEventListener("scroll", () => {
+    clearTimeout(st);
+    st = setTimeout(() => { const i = Math.round(trk.scrollLeft / trk.clientWidth); if (i !== idx) show(i, false); }, 120);
+  }, { passive: true });
+  show(0, false);
+}
+
+function setQty(id, d, ev) {
+  const max = S.me.user.type === "wholesale" ? 1000 : 100;
+  const q = Math.max(0, Math.min(max, (S.cart[id] || 0) + d));
+  if (q) S.cart[id] = q; else delete S.cart[id];
+  haptic(d > 0 ? "light" : "soft");
+  const p = S.me.products.find((x) => x.id === id);
+  const el = $("ctl-" + id); if (el && p) el.innerHTML = ctrl(p);
+  if (d > 0 && ev) flyToCart(ev);
+  renderCartBar(true);
+}
+function flyToCart(ev) {
+  const bar = $("cartbar");
+  if (!bar.classList.contains("show")) return;
+  const r = bar.getBoundingClientRect();
+  const f = document.createElement("div");
+  f.className = "flyer";
+  f.style.left = ev.clientX - 9 + "px"; f.style.top = ev.clientY - 9 + "px";
+  document.body.appendChild(f);
+  requestAnimationFrame(() => {
+    f.style.transform = `translate(${r.left + 30 - ev.clientX}px, ${r.top + 20 - ev.clientY}px) scale(.5)`;
+    f.style.opacity = ".2";
+  });
+  setTimeout(() => f.remove(), 600);
+}
+function renderCartBar(bump) {
+  const bar = $("cartbar");
+  const t = cartTotal();
+  if (!t.n || S.view !== "catalog") { bar.classList.remove("show"); return; }
+  bar.innerHTML = `<span class="cnt">${t.n}</span><span class="grow"><small>Savatcha${t.fee ? " · yetkazish " + money(t.fee) : ""}</small><b>${money(t.items + t.fee)}</b></span>
+    <span class="go">Davom etish ${ic("arrow-right-linear", 18)}</span>`;
+  bar.classList.add("show");
+  if (bump) { bar.classList.remove("bump"); void bar.offsetWidth; bar.classList.add("bump"); }
+}
+
+// ------------------------------------------------------------------ Rasmiylashtirish
+function openCheckout(addrOnly) {
+  if (!addrOnly && !cartTotal().n) return toast("Avval mahsulot tanlang");
+  S.view = "checkout"; S.addrOnly = Boolean(addrOnly) && !cartTotal().n;
+  haptic(); render(); window.scrollTo(0, 0);
+}
+function renderCheckout() {
+  const t = cartTotal();
+  const lines = S.me.products.filter((p) => S.cart[p.id]).map((p) =>
+    `<div class="line"><span>${esc(p.title)} × ${S.cart[p.id]}</span><span>${money(p.price * S.cart[p.id])}</span></div>`).join("");
+  $("app").innerHTML = `
+    <div class="top"><div><small>${S.addrOnly ? "Manzil" : "Rasmiylashtirish"}</small><h1>${S.addrOnly ? "Yetkazish manzili" : "Qayerga yetkazamiz?"}</h1></div></div>
+    <div class="pick"><div id="map"></div><div class="pinshadow"></div>
+      <div class="pin" id="pin"><div class="head">${ic("home-2-bold", 22)}</div><div class="leg"></div></div>
+      <div class="geo"><small>Yetkazish nuqtasi</small><b id="geo">${esc(S.geo || "Xaritani suring")}</b></div>
+      <button class="mapfab" onclick="locateMe()" aria-label="Joylashuvim">${ic("gps-bold", 24)}</button></div>
+    <textarea id="addr" rows="2" maxlength="300" placeholder="Uy, podyezd, qavat, xonadon (masalan: 12-uy, 3-podyezd, 5-qavat)">${esc(S.address)}</textarea>
+    ${S.addrOnly ? `<button class="btn b full" onclick="saveAddr()">${ic("check-circle-bold", 22)} Saqlash</button>` : `
+    <h2>Yetkazish vaqti</h2>
+    <div class="seg"><button id="tm-asap" class="${S.timeMode === "asap" ? "on" : ""}" onclick="setTime('asap')">${ic("bolt-bold", 18)}Tezroq</button>
+      <button id="tm-custom" class="${S.timeMode === "custom" ? "on" : ""}" onclick="setTime('custom')">${ic("clock-circle-bold", 18)}Vaqtni tanlash</button></div>
+    <input id="ttext" maxlength="100" placeholder="Masalan: bugun 18:00 dan keyin" value="${esc(S.timeText)}" style="display:${S.timeMode === "custom" ? "block" : "none"}">
+    <h2>To'lov</h2>
+    <div class="seg"><button class="on">${ic("wad-of-money-bold", 20)}Naqd</button>
+      <button disabled>${ic("card-bold", 20)}Click<em>tez orada</em></button>
+      <button disabled>${ic("card-2-bold", 20)}Payme<em>tez orada</em></button></div>
+    <h2>Buyurtma</h2>
+    <div class="ord">${lines}${t.fee ? `<div class="line"><span>Yetkazish</span><span>${money(t.fee)}</span></div>` : `<div class="line"><span>Yetkazish</span><span style="color:var(--ok)">bepul</span></div>`}
+      <div class="line tot"><span>Jami (naqd)</span><span>${money(t.items + t.fee)}</span></div></div>
+    <button id="sendbtn" class="btn b full" onclick="sendOrder()">${ic("cart-check-bold", 22)} Buyurtma berish · ${money(t.items + t.fee)}</button>`}`;
+  $("addr").oninput = (e) => (S.address = e.target.value);
+  const tt = $("ttext"); if (tt) tt.oninput = (e) => (S.timeText = e.target.value);
+  initPicker();
+}
+function initPicker() {
+  if (!mapOk()) { $("map").innerHTML = '<div class="empty">Xarita yuklanmadi</div>'; return; }
+  const c = S.loc || { lat: DEFAULT_CENTER[0], lon: DEFAULT_CENTER[1] };
+  S.map = makeMap("map", c.lat, c.lon, S.loc ? 17 : 12);
+  const pin = $("pin");
+  S.map.on("movestart", () => pin.classList.add("up"));
+  S.map.on("moveend", () => {
+    pin.classList.remove("up");
+    const m = S.map.getCenter();
+    S.loc = { lat: m.lat, lon: m.lng };
+    reverseGeo(m.lat, m.lng);
+  });
+  if (S.loc) reverseGeo(S.loc.lat, S.loc.lon); else locateMe();
+}
+// Pin ostidagi ko'cha va uy raqami (OpenStreetMap Nominatim)
+function reverseGeo(lat, lon) {
+  clearTimeout(reverseGeo.t);
+  const el = $("geo"); if (el) el.textContent = "Manzil aniqlanmoqda…";
+  reverseGeo.t = setTimeout(async () => {
+    const key = lat.toFixed(5) + "," + lon.toFixed(5);
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=uz&lat=${lat}&lon=${lon}`);
+      const j = await r.json();
+      const a = j.address || {};
+      const street = a.road || a.pedestrian || a.residential || a.neighbourhood || a.quarter || a.suburb || "";
+      const title = [street, a.house_number].filter(Boolean).join(", ") || j.name || a.city || a.town || a.village || "";
+      if (S.loc && S.loc.lat.toFixed(5) + "," + S.loc.lon.toFixed(5) !== key) return;   // pin allaqachon ko'chdi
+      S.geo = title;
+      const e2 = $("geo"); if (e2) e2.textContent = title || "Belgilangan nuqta";
+    } catch { const e2 = $("geo"); if (e2) e2.textContent = "Belgilangan nuqta"; S.geo = ""; }
+  }, 500);
+}
+function fullAddress() {
+  const d = S.address.trim();
+  if (!S.geo || d.includes(S.geo)) return d;
+  return d ? `${S.geo} · ${d}` : S.geo;
+}
+function locateMe() {
+  const ok = (lat, lon) => { S.loc = { lat, lon }; if (S.map) S.map.flyTo({ center: [lon, lat], zoom: 17, duration: 900 }); haptic("medium"); };
+  const fail = () => toast("Joylashuvni aniqlab bo'lmadi. Xaritani suring.");
+  const browser = () => navigator.geolocation
+    ? navigator.geolocation.getCurrentPosition((p) => ok(p.coords.latitude, p.coords.longitude), fail, { enableHighAccuracy: true, timeout: 15000 })
+    : fail();
+  const lm = tgw.LocationManager;
+  if (lm && tgw.isVersionAtLeast && tgw.isVersionAtLeast("8.0")) {
+    lm.init(() => {
+      if (!lm.isLocationAvailable) return browser();
+      lm.getLocation((d) => (d ? ok(d.latitude, d.longitude) : (lm.isAccessGranted ? fail() : lm.openSettings())));
+    });
+  } else browser();
+}
+function setTime(mode) {
+  S.timeMode = mode;
+  $("tm-asap").classList.toggle("on", mode === "asap");
+  $("tm-custom").classList.toggle("on", mode === "custom");
+  $("ttext").style.display = mode === "custom" ? "block" : "none";
+  if (mode === "custom") $("ttext").focus();
+}
+async function saveAddr() {
+  if (!S.loc) return toast("Xaritada manzilni belgilang");
+  const address = fullAddress();
+  try {
+    const r = await call("profile", { lat: S.loc.lat, lon: S.loc.lon, address });
+    S.address = r.address || address;
+    Object.assign(S.me.user, { last_lat: r.lat, last_lon: r.lon, last_address: r.address });
+    toast("✅ Manzil saqlandi");
+    S.view = "profile"; render();
+  } catch (e) { toast(e.message, 4000); }
+}
+
+async function sendOrder() {
+  if (S.sending) return;
+  if (!S.loc) return toast("Manzilni belgilang");
+  if (S.timeMode === "custom" && !S.timeText.trim()) { toast("Yetkazish vaqtini yozing"); $("ttext").focus(); return; }
+  S.sending = true;
+  const btn = $("sendbtn"); btn.disabled = true; btn.innerHTML = '<iconify-icon icon="svg-spinners:ring-resize" width="22"></iconify-icon> Yuborilmoqda...';
+  try {
+    const r = await call("order", { cart: S.cart, lat: S.loc.lat, lon: S.loc.lon, address: fullAddress(),
+      time: S.timeMode === "asap" ? "Imkon qadar tezroq" : S.timeText.trim(), idem: S.idem });
+    try { tgw.HapticFeedback.notificationOccurred("success"); } catch {}
+    S.cart = {}; S.idem = newIdem();
+    S.me = await call("me").catch(() => S.me);
+    openTrack(r.id);
+  } catch (e) {
+    toast(e.message, 4000);
+    btn.disabled = false; btn.innerHTML = ic("cart-check-bold", 22) + " Buyurtma berish";
+  } finally { S.sending = false; }
+}
+
+// ------------------------------------------------------------------ Kuzatish (to'liq ekran)
+// Yuqoridan ko'rinishdagi yengil avtomobil (ZamZam rangida), shimolga qaragan
+const CAR_SVG = `<svg viewBox="0 0 48 96" width="22" height="44" aria-hidden="true">
+  <defs><linearGradient id="zb" x1="0" x2="1"><stop offset="0" stop-color="#e6ecf6"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#dde5f1"/></linearGradient>
+  <linearGradient id="zg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46556e"/><stop offset="1" stop-color="#1b2433"/></linearGradient></defs>
+  <rect x="0" y="31" width="6" height="5" rx="2.5" fill="#cfd8e6"/><rect x="42" y="31" width="6" height="5" rx="2.5" fill="#cfd8e6"/>
+  <path d="M24 2C36 2 42 8 43 18L44 40V78C44 89 38 94 24 94S4 89 4 78V40L5 18C6 8 12 2 24 2Z" fill="url(#zb)" stroke="#c3cee0"/>
+  <path d="M9.5 30C15 24 33 24 38.5 30L36.5 42C30 40 18 40 11.5 42Z" fill="url(#zg)"/>
+  <rect x="11.5" y="44" width="25" height="24" rx="6" fill="#f5f8fd" stroke="#dbe3ef"/>
+  <rect x="21.5" y="44" width="5" height="24" rx="2" fill="#2b6cf6"/>
+  <path d="M11.5 71C18 73 30 73 36.5 71L37.5 80C30 84 18 84 10.5 80Z" fill="url(#zg)"/>
+  <path d="M9 10Q11 6 16 5.5L15 10Z" fill="#fff4b8"/><path d="M39 10Q37 6 32 5.5L33 10Z" fill="#fff4b8"/>
+  <rect x="8" y="88" width="8" height="2.6" rx="1.3" fill="#f04438"/><rect x="32" y="88" width="8" height="2.6" rx="1.3" fill="#f04438"/>
+</svg>`;
+function bearing(a, b) {
+  const r = (x) => (x * Math.PI) / 180;
+  const y = Math.sin(r(b.lng - a.lng)) * Math.cos(r(b.lat));
+  const x = Math.cos(r(a.lat)) * Math.sin(r(b.lat)) - Math.sin(r(a.lat)) * Math.cos(r(b.lat)) * Math.cos(r(b.lng - a.lng));
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+const el = (html, cls = "") => { const d = document.createElement("div"); d.className = cls; d.innerHTML = html; return d; };
+
+function openTrack(id) {
+  S.view = "track"; S.trackId = id;
+  cleanup(); renderNav(); renderCartBar();
+  const o = S.me.orders.find((x) => x.id === id);
+  if (!o) { S.view = "orders"; return render(); }
+  const box = document.createElement("div");
+  box.id = "trk";
+  box.innerHTML = `<div id="tmap"></div>
+    <button class="tback" onclick="onBack()" aria-label="Orqaga">${ic("alt-arrow-left-linear", 24)}</button>
+    <button class="tfit" id="tfit" onclick="fitTrack(true)" aria-label="Markazlash">${ic("map-arrow-square-bold", 24)}</button>
+    <div class="sheet" id="sheet"></div>`;
+  document.body.appendChild(box);
+  if (!mapOk()) { $("tmap").innerHTML = '<div class="empty">Xarita yuklanmadi</div>'; renderSheet(o); return; }
+  const map = makeMap("tmap", o.lat, o.lon, 16);
+  const home = new maplibregl.Marker({ element: el(`<div class="h">${ic("home-2-bold", 20)}</div><div class="l"></div>`, "homemk"), anchor: "bottom" })
+    .setLngLat([o.lon, o.lat]).addTo(map);
+  S.trk = { map, home, car: null, carPos: null, radar: null, raf: 0, ready: false, userMoved: false, order: o };
+  map.on("dragstart", () => { if (S.trk) S.trk.userMoved = true; });
+  map.on("load", () => {
+    if (!S.trk || S.trk.map !== map) return;
+    map.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#2b6cf6", "line-width": 5, "line-opacity": 0.85, "line-dasharray": [0.1, 1.8] } });
+    S.trk.ready = true;
+    if (S.trk.carPos) setLine(S.trk.carPos);
+  });
+  renderSheet(o);
+  drawTrack(o, true);
+  S.poll = setInterval(pollTrack, 8000);
+}
+function setLine(p) {
+  const t = S.trk; if (!t || !t.ready) return;
+  const o = t.order;
+  t.map.getSource("route").setData(p ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[p.lng, p.lat], [o.lon, o.lat]] } }
+                                       : { type: "FeatureCollection", features: [] });
+}
+function drawTrack(o, first) {
+  const t = S.trk; if (!t) return;
+  t.order = o;
+  const searching = SEARCHING.includes(o.status);
+  if (searching && !t.radar) {
+    t.radar = new maplibregl.Marker({ element: el("<span></span><span></span><span></span>", "radar") }).setLngLat([o.lon, o.lat]).addTo(t.map);
+    t.map.jumpTo({ center: [o.lon, o.lat], zoom: 15 });
+  }
+  if (!searching && t.radar) { t.radar.remove(); t.radar = null; }
+  if (o.status === "accepted" && o.courier_loc) {
+    const to = { lat: o.courier_loc.lat, lng: o.courier_loc.lon };
+    if (!t.car) {
+      t.car = new maplibregl.Marker({ element: el(CAR_SVG, "carmk"), rotationAlignment: "map", pitchAlignment: "map" })
+        .setLngLat([to.lng, to.lat]).addTo(t.map);
+      t.carPos = to;
+      t.car.setRotation(bearing(to, { lat: o.lat, lng: o.lon }));
+      setLine(to);
+      fitTrack(false);
+    } else animateCar(to);
+  } else if (t.car && o.status !== "accepted") {
+    t.car.remove(); t.car = null; t.carPos = null; setLine(null);
+  }
+}
+function animateCar(to) {
+  const t = S.trk;
+  const from = t.carPos;
+  if (dist(from.lat, from.lng, to.lat, to.lng) < 0.003) return;   // 3 m dan kam — joyida
+  t.car.setRotation(bearing(from, to));
+  cancelAnimationFrame(t.raf);
+  const start = performance.now(), dur = 2500;
+  const step = (now) => {
+    if (!S.trk || !t.car) return;
+    const k = Math.min(1, (now - start) / dur);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    const p = { lat: from.lat + (to.lat - from.lat) * e, lng: from.lng + (to.lng - from.lng) * e };
+    t.carPos = p;
+    t.car.setLngLat([p.lng, p.lat]);
+    setLine(p);
+    if (k < 1) t.raf = requestAnimationFrame(step);
+    else if (!t.userMoved) fitTrack(false);
+  };
+  t.raf = requestAnimationFrame(step);
+}
+function fitTrack(byUser) {
+  const t = S.trk; if (!t) return;
+  if (byUser) { t.userMoved = false; haptic(); }
+  const sheetH = ($("sheet")?.offsetHeight || 300);
+  const btn = $("tfit"); if (btn) btn.style.bottom = sheetH + 14 + "px";
+  const o = t.order;
+  if (t.carPos) {
+    const lats = [t.carPos.lat, o.lat], lngs = [t.carPos.lng, o.lon];
+    t.map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+      { padding: { top: 110, bottom: sheetH + 40, left: 60, right: 60 }, maxZoom: 17, duration: 800 });
+  } else {
+    t.map.easeTo({ center: [o.lon, o.lat], zoom: t.radar ? 15 : 16, duration: 600 });
+  }
+}
+
+function renderSheet(o) {
+  const sh = $("sheet"); if (!sh) return;
+  const itemsHtml = o.items.map((i) => `<div class="line"><span>${esc(i.title)} × ${i.qty}</span><span>${money(i.qty * i.unit_price)}</span></div>`).join("") +
+    (Number(o.delivery_fee) ? `<div class="line"><span>Yetkazish</span><span>${money(o.delivery_fee)}</span></div>` : "") +
+    `<div class="line tot"><span>Jami (naqd)</span><span>${money(o.total)}</span></div>`;
+  const details = `<details class="det"><summary>Buyurtma #${o.id} · ${money(o.total)} ${ic("alt-arrow-down-linear", 18)}</summary>${itemsHtml}
+    <div class="card" style="background:var(--bg);margin-top:10px">${ic("map-point-bold-duotone", 22)}<div class="grow"><b>${esc(o.address) || "Xaritadagi belgi"}</b><small>${esc(o.time || "")}</small></div></div></details>`;
+  const steps = (n, cur) => `<div class="prog">${[0, 1, 2].map((i) => `<span class="${i < n ? "on" : ""} ${i === cur ? "cur" : ""}"></span>`).join("")}</div>
+    <div class="steps">${["Qidiruv", "Yo'lda", "Yetkazildi"].map((t, i) => `<span class="${i < n || i === cur ? "on" : ""}">${t}</span>`).join("")}</div>`;
+  let html = `<div class="grab"></div>`;
+  if (SEARCHING.includes(o.status)) {
+    html += `<div class="sh-top"><div><h1 class="dots">Dostavchi qidirilmoqda</h1><small>Yaqin atrofdagi bo'sh dostavchiga yuborilmoqda</small></div>
+      <div class="etabox">${ic("radar-2-bold", 26)}</div></div>${steps(0, 0)}
+      ${o.status === "unassigned" ? `<div class="stale">Hozir yaqinda bo'sh dostavchi yo'q — operator tez orada biriktiradi.</div>` : ""}
+      ${details}<button class="btn red full sm" style="margin-top:8px" onclick="cancelOrder(${o.id})">${ic("close-circle-bold", 18)} Buyurtmani bekor qilish</button>`;
+  } else if (o.status === "accepted") {
+    const e = orderEta(o);
+    const near = e && e.d < 0.15;
+    const ago = o.courier_loc ? Math.max(0, Math.round((Date.now() - new Date(o.courier_loc.at)) / 60000)) : null;
+    const c = o.courier || {};
+    const initials = String(c.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    html += `<div class="sh-top"><div><h1>${near ? "Dostavchi yetib keldi" : "Dostavchi yo'lda"}</h1>
+        <small>${e ? (near ? "Eshikka chiqib kutib oling" : `Sizgacha ${fmtKm(e.d)}`) : "Dostavchi buyurtmangizni olib kelmoqda"}</small></div>
+      <div class="etabox">${e ? `<b>${near ? "0" : e.min}</b><small>daqiqa</small>` : ic("delivery-bold", 26)}</div></div>
+      ${steps(near ? 2 : 1, near ? -1 : 1)}
+      ${ago != null && ago >= 5 ? `<div class="stale">Dostavchi joylashuvi ${ago} daqiqa oldin yangilangan</div>` : ""}
+      <div class="courier"><div class="ava">${esc(initials)}<i>${ic("verified-check-bold", 16)}</i></div>
+        <div class="grow"><b>${esc(c.name || "Dostavchi")}</b><small>ZamZam dostavchisi</small><span class="plate">${ic("bottle-linear", 12)} ZAMZAM</span></div></div>
+      <div class="acts">${c.phone ? `<a class="act" href="tel:${esc(c.phone)}">${ic("phone-calling-bold", 24)}Qo'ng'iroq</a>` : ""}
+        ${e ? `<button class="act" onclick="fitTrack(true)">${ic("map-point-wave-bold", 24)}Xaritada</button>` : ""}
+        <button class="act" onclick="pollTrack(true)">${ic("refresh-bold", 24)}Yangilash</button></div>
+      ${details}`;
+  } else if (o.status === "delivered") {
+    html += `<div style="text-align:center"><div class="okbig">${ic("check-circle-bold", 46)}</div><h1>Yetkazildi!</h1>
+      <small style="font-size:15px;margin:6px 0 14px">Xaridingiz uchun rahmat 💧</small></div>${steps(3, -1)}
+      ${Number(o.debt_amount) > 0 ? `<div class="banner red">${ic("wallet-money-bold", 20)} Qarzga yozildi: ${money(o.debt_amount)}</div>` : ""}
+      ${o.paid_amount != null ? `<div class="line"><span>Siz to'lagan naqd</span><b>${money(o.paid_amount)}</b></div>` : ""}
+      ${confirmBox(o)}
+      ${details}<button class="btn b full" style="margin-top:8px" onclick="go('catalog')">${ic("shop-2-bold", 20)} Yana buyurtma berish</button>`;
+  } else {
+    html += `<div style="text-align:center"><div class="okbig" style="background:var(--bg);color:var(--mute)">${ic("close-circle-bold", 46)}</div>
+      <h1>Bekor qilingan</h1></div>${details}<button class="btn full" style="margin-top:8px" onclick="go('catalog')">Katalogga qaytish</button>`;
+  }
+  sh.innerHTML = html;
+  const btn = $("tfit"); if (btn) btn.style.bottom = sh.offsetHeight + 14 + "px";
+}
+
+async function pollTrack(manual) {
+  if (S.view !== "track" || !S.trk) return;
+  let me;
+  try { me = await call("me"); } catch (e) { if (manual) toast(e.message); return; }
+  if (!S.trk) return;
+  S.me = me;
+  const o = me.orders.find((x) => x.id === S.trackId);
+  if (!o) return;
+  const prev = S.trk.order;
+  const changed = prev.status !== o.status;
+  if (changed) {
+    try { tgw.HapticFeedback.notificationOccurred(o.status === "cancelled" ? "warning" : "success"); } catch {}
+    if (!ACTIVE.includes(o.status)) { clearInterval(S.poll); S.poll = null; }
+  }
+  drawTrack(o, false);
+  renderSheet(o);
+  if (manual) { fitTrack(true); toast("Yangilandi"); }
+}
+
+// ------------------------------------------------------------------ Buyurtmalar
+function renderOrders() {
+  const list = S.me.orders;
+  $("app").innerHTML = `<div class="top"><div><small>ZamZam</small><h1>Buyurtmalar</h1></div>
+      <button class="pill" onclick="refresh()">${ic("refresh-bold", 16)} Yangilash</button></div>
+    ${Number(S.me.debt) > 0 ? `<div class="banner red">${ic("wallet-money-bold", 20)} Qarzingiz: ${money(S.me.debt)}</div>` : ""}` +
+    (list.length ? list.map((o, i) => {
+      const [st, cls] = STATUS[o.status] || [o.status, ""];
+      const live = ACTIVE.includes(o.status);
+      const debt = o.status === "delivered" && Number(o.debt_amount) > 0;
+      const step = o.status === "delivered" ? 3 : o.status === "accepted" ? 2 : 1;
+      const steps = o.status === "cancelled" ? "" : `<div class="ost">${["Qabul qilindi", "Yo'lda", "Yetkazildi"].map((t, k) =>
+        `<div class="${k < step ? "on" : ""} ${k === step - 1 && live ? "cur" : ""}"><i></i>${t}</div>`).join("")}</div>`;
+      return `<div class="ord" style="animation:rise .4s both;animation-delay:${i * 50}ms">
+        <div class="hd"><div><b>Buyurtma #${o.id}</b><small>${fmtDate(o.created_at)}${o.price_type === "wholesale" ? " · optom" : ""}</small></div><span class="tag ${cls}">${st}</span></div>
+        ${steps}
+        ${o.items.map((it) => `<div class="line"><span>${esc(it.title)} × ${it.qty}</span><span>${money(it.qty * it.unit_price)}</span></div>`).join("")}
+        <div class="line tot"><span>Jami</span><span>${money(o.total)}</span></div>
+        ${debt ? `<div class="line"><span>To'landi</span><span>${money(o.paid_amount)}</span></div><div class="line" style="color:var(--red)"><span>Qarzga</span><span>${money(o.debt_amount)}</span></div>` : ""}
+        ${(o.notes || []).filter((n) => n.kind === "defective").map((n) => `<div class="note">${n.volume_l} L × ${n.qty} yaroqsiz tara qabul qilinmadi: ${esc(n.text)}</div>`).join("")}
+        ${confirmBox(o)}
+        ${o.courier && o.status !== "cancelled" ? `<div class="crow">${ic("delivery-bold-duotone", 24)}<div class="grow"><b>${esc(o.courier.name)}</b><small>Dostavchi</small></div>
+          ${o.courier.phone && live ? `<a class="pill" href="tel:${esc(String(o.courier.phone).replace(/[^\d+]/g, ""))}">${ic("phone-calling-bold", 16)} Qo'ng'iroq</a>` : ""}</div>` : ""}
+        ${["new", "offered", "unassigned"].includes(o.status) ? `<button class="btn red full sm" style="margin-top:10px" onclick="cancelOrder(${o.id})">${ic("close-circle-bold", 18)} Bekor qilish</button>` : ""}
+        ${live ? `<button class="btn b full sm" style="margin-top:10px" onclick="openTrack(${o.id})">${ic("map-point-wave-bold", 18)} ${o.status === "accepted" ? "Xaritada kuzatish" : "Holatini ko'rish"}</button>`
+               : `<button class="btn full sm" style="margin-top:10px" onclick="reorder(${o.id})">${ic("restart-bold", 18)} Takrorlash</button>`}
+      </div>`;
+    }).join("") : `<div class="empty">${ic("box-bold-duotone", 48)}<br>Hali buyurtmalar yo'q</div>`);
+}
+async function refresh() {
+  try { S.me = await call("me"); render(); toast("Yangilandi"); } catch (e) { toast(e.message); }
+}
+function cancelOrder(id) {
+  const doIt = async (yes) => {
+    if (!yes) return;
+    try { await call("cancel", { order_id: id }); S.me = await call("me"); if (S.view === "track") pollTrack(); else render(); toast("Bekor qilindi"); }
+    catch (e) { toast(e.message, 4000); }
+  };
+  if (tgw.showConfirm) tgw.showConfirm(`Buyurtma #${id} bekor qilinsinmi?`, doIt); else doIt(confirm(`Buyurtma #${id} bekor qilinsinmi?`));
+}
+
+// ------------------------------------------------------------------ Profil
+function renderProfile() {
+  const u = S.me.user, b = S.me.bottles, st = S.me.settings;
+  const total = b.reduce((x, y) => x + y.balance, 0);
+  const done = S.me.orders.filter((o) => o.status === "delivered").length;
+  const ini = String(u.business || u.name || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  $("app").innerHTML = `<div class="top"><div><small>ZamZam</small><h1>Sozlamalar</h1></div></div>
+    <div class="prof"><div class="av">${esc(ini)}</div><div style="min-width:0"><b style="font-size:18px">${esc(u.business || u.name)}</b>
+      <small>${u.business ? esc(u.name) + " · " : ""}${esc(u.phone)}</small>${u.type === "wholesale" ? `<span class="tag" style="margin-top:6px">🏪 optom mijoz</span>` : ""}</div></div>
+    <div class="tiles3">
+      <div class="tile"><b>${done}</b><small>yetkazildi</small></div>
+      <div class="tile"><b>${total}</b><small>idishimiz sizda</small></div>
+      <div class="tile"><b style="color:${Number(S.me.debt) > 0 ? "var(--red)" : "var(--ok)"}">${Number(S.me.debt) > 0 ? short(S.me.debt) : "0"}</b><small>qarz</small></div></div>
+    ${b.length ? `<h2>Idishlar</h2>${b.map((x) => `<div class="mrow"><div class="mi">${ic("bottle-bold-duotone", 22)}</div><div class="grow"><b>${x.volume_l} litrlik idish</b><small>bo'shini keyingi buyurtmada qaytaring</small></div><b>${x.balance} ta</b></div>`).join("")}` : ""}
+    <h2>Ma'lumotlarim</h2>
+    <div class="mrow" onclick="editName()"><div class="mi">${ic("user-bold", 22)}</div><div class="grow"><b>Ism-familiya</b><small>${esc(u.name)}</small></div>${ic("pen-bold", 18)}</div>
+    <div class="mrow" style="cursor:default"><div class="mi">${ic("phone-bold", 22)}</div><div class="grow"><b>Telefon</b><small>${esc(u.phone)}</small></div></div>
+    <div class="mrow" onclick="openCheckout(true)"><div class="mi">${ic("map-point-bold", 22)}</div><div class="grow"><b>Yetkazish manzili</b><small>${esc(S.address || "belgilanmagan")}</small></div>${ic("alt-arrow-right-linear", 18)}</div>
+    ${st.support_phone ? `<a class="mrow" href="tel:${esc(String(st.support_phone).replace(/[^\d+]/g, ""))}"><div class="mi">${ic("phone-calling-bold", 22)}</div><div class="grow"><b>Qo'llab-quvvatlash</b><small>${esc(st.support_phone)}</small></div>${ic("alt-arrow-right-linear", 18)}</a>` : ""}
+    <small style="margin:14px 4px">Yaroqsiz (darz ketgan, iflos) idishlar qabul qilinmaydi. Telefon raqamini o'zgartirish uchun qo'llab-quvvatlashga qo'ng'iroq qiling.</small>`;
+}
+function editName() {
+  modal(`<h1 style="font-size:22px;margin-bottom:6px">Ism-familiya</h1><small style="margin-bottom:12px">Dostavchi sizni shu ism bilan topadi</small>
+    <input id="nm" maxlength="60" value="${esc(S.me.user.name)}" placeholder="Aziz Karimov">
+    <button class="btn b full" id="nmbtn" onclick="saveName()">Saqlash</button>`);
+  setTimeout(() => $("nm")?.focus(), 150);
+}
+async function saveName() {
+  const btn = $("nmbtn"); btn.disabled = true;
+  try {
+    const r = await call("profile", { name: $("nm").value });
+    S.me.user.name = r.name; closeModal(); render(); toast("✅ Saqlandi");
+  } catch (e) { toast(e.message, 4000); btn.disabled = false; }
+}
+const short = (n) => { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(1).replace(".0", "") + " mln" : n >= 1e4 ? Math.round(n / 1e3) + " ming" : String(n); };
+
+// Oldingi buyurtmani takrorlash: mahsulotlar nomi/hajmi bo'yicha joriy katalogdan topiladi
+function reorder(id) {
+  const o = S.me.orders.find((x) => x.id === id);
+  if (!o) return;
+  S.cart = {};
+  let miss = 0;
+  for (const it of o.items) {
+    const p = S.me.products.find((x) => x.title === it.title) || (it.volume_l ? S.me.products.find((x) => x.volume_l === it.volume_l) : null);
+    if (p) S.cart[p.id] = (S.cart[p.id] || 0) + it.qty; else miss++;
+  }
+  if (!Object.keys(S.cart).length) return toast("Bu mahsulotlar hozir sotuvda yo'q");
+  if (miss) toast("Ba'zi mahsulotlar hozir sotuvda yo'q");
+  haptic("medium");
+  openCheckout();
+}
+
+// Mahsulot kartochkasi (kattaroq rasm va tavsif)
+function openProduct(id) {
+  const p = S.me.products.find((x) => x.id === id);
+  if (!p) return;
+  modal(`<div class="pdimg">${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : ic(p.volume_l ? "bottle-bold-duotone" : "box-bold-duotone", 110)}</div>
+    <h1 style="font-size:24px">${esc(p.title)}</h1>
+    <small style="font-size:15px;margin:6px 0 12px">${esc(p.description || (p.returnable ? `${p.volume_l} litr · bo'sh idish qaytariladi` : ""))}</small>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px">
+      <div><b style="font-size:24px">${money(p.price)}</b>${p.price < p.retail_price ? `<span class="old" style="display:block">${money(p.retail_price)}</span>` : ""}</div>
+      <span id="pdctl">${ctrl(p).replaceAll("setQty(", "setQtyModal(")}</span></div>
+    <button class="btn b full" onclick="closeModal();renderCartBar(true)">Tayyor</button>`);
+}
+function setQtyModal(id, d, ev) {
+  setQty(id, d, null);
+  const p = S.me.products.find((x) => x.id === id);
+  const el = $("pdctl"); if (el) el.innerHTML = ctrl(p).replaceAll("setQty(", "setQtyModal(");
+}
+
+async function confirmDelivery(id, ok) {
+  const send = async (note) => {
+    try { await call("confirm", { order_id: id, ok, note }); S.me = await call("me"); toast(ok ? "Rahmat! 💧" : "Rahbarga yuborildi"); }
+    catch (e) { return toast(e.message, 4000); }
+    render();
+  };
+  if (ok) return send("");
+  if (tgw.showPopup) {
+    tgw.showPopup({ title: "Nima noto'g'ri?", message: "Rahbar siz bilan bog'lanadi",
+      buttons: [{ id: "money", type: "default", text: "To'lov noto'g'ri yozilgan" }, { id: "water", type: "default", text: "Suv to'liq kelmadi" },
+                { id: "bottles", type: "default", text: "Idish soni noto'g'ri" }] },
+      (b) => { if (b) send({ money: "To'lov summasi noto'g'ri yozilgan", water: "Suv to'liq kelmadi", bottles: "Idishlar soni noto'g'ri" }[b] || "Boshqa"); });
+  } else send("Mijoz e'tiroz bildirdi");
+}
+const confirmBox = (o) => o.status === "delivered" && !o.client_confirm && Date.now() - new Date(o.delivered_at) < 7 * 864e5
+  ? `<div class="banner blue" style="margin:10px 0 0">${ic("question-circle-bold", 20)} Dostavchi kiritgan pul, qarz va idishlar to'g'rimi?</div>
+     <div class="cfm"><button class="btn b sm" onclick="confirmDelivery(${o.id}, true)">✅ Hammasi to'g'ri</button><button class="btn red sm" onclick="confirmDelivery(${o.id}, false)">⚠️ Noto'g'ri</button></div>`
+  : o.client_confirm === "ok" ? `<div class="note" style="background:var(--okl);color:#067647">✓ Siz tasdiqlagansiz</div>`
+  : o.client_confirm === "dispute" ? `<div class="note" style="background:var(--redl);color:var(--red)">E'tirozingiz rahbarga yuborilgan</div>` : "";
+
+// ------------------------------------------------------------------ Modal
+function modal(html) {
+  closeModal();
+  const m = document.createElement("div");
+  m.className = "modal"; m.id = "modal";
+  m.innerHTML = `<div>${html}</div>`;
+  m.onclick = (e) => { if (e.target === m) closeModal(); };
+  document.body.appendChild(m);
+}
+function closeModal() { const m = $("modal"); if (m) m.remove(); }
+
+load();
+</script>
+</body>
+</html>
